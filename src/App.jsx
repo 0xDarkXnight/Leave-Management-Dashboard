@@ -1,122 +1,118 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useEffect, useState } from "react";
+import { 
+  Navigate,
+  Route,
+  Routes 
+} from "react-router-dom";
+import Navbar from "./components/Navbar";
+import Dashboard from "./pages/Dashboard";
+import ApplyLeave from "./pages/ApplyLeave";
+import LeaveHistory from "./pages/LeaveHistory";
+
+const STORAGE_KEY = "leave_requests";
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [leaveRequests, setLeaveRequests] = useState(() => {
+    try {
+      const storedData = localStorage.getItem(STORAGE_KEY);
+      return storedData ? JSON.parse(storedData) : [];
+    } catch (error) {
+      console.error("Error reading from localStorage:", error);
+      return [];
+    }
+  });
+
+  const [editingRequest, setEditingRequest] = useState(null);
+  const [requestToDelete, setRequestToDelete] = useState(null);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(leaveRequests));
+  }, [leaveRequests]);
+
+  const addLeaveRequest = (requestData) => {
+    const newRequest = {
+      id: Date.now(),
+      ...requestData,
+      status: "Pending",
+      createdAt: new Date().toISOString(),
+    };
+
+    setLeaveRequests((prevRequests) => [newRequest, ...prevRequests]);
+  };
+
+  const updateLeaveStatus = (id, newStatus) => {
+    setLeaveRequests((prevRequests) =>
+      prevRequests.map((request) =>
+        request.id === id ? { ...request, status: newStatus } : request
+      )
+    );
+  };
+
+  const deleteLeaveRequest = (id) => {
+    setLeaveRequests((prevRequests) =>
+      prevRequests.filter(
+        (request) => request.id !== id
+      )
+    );
+  };
+
+  const startEditingRequest = (id) => {
+    const request = leaveRequests.find(
+      (item) => item.id === id
+    );
+
+    if (!request) return;
+
+    setEditingRequest(request);
+  };
+
+  const updateLeaveRequest = (updatedRequest) => {
+    setLeaveRequests((prevRequests) =>
+      prevRequests.map((request) =>
+        request.id === updatedRequest.id
+          ? updatedRequest
+          : request
+      )
+    );
+
+    setEditingRequest(null);
+  };
 
   return (
     <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
+      <Navbar />
+      <main className="container">
+        <Routes>
+          <Route
+            path="/"
+            element={<Dashboard leaveRequests={leaveRequests} />}
+          />
+          <Route
+            path="/apply"
+            element={
+              <ApplyLeave 
+              onAddLeave={addLeaveRequest}
+              editingRequest={editingRequest}
+              onUpdateLeave={updateLeaveRequest}
+              />
+            }
+          />
+          <Route
+            path="/history"
+            element={
+              <LeaveHistory
+                leaveRequests={leaveRequests}
+                onUpdateStatus={updateLeaveStatus}
+                onDeleteRequest={deleteLeaveRequest}
+                onEditRequest={startEditingRequest}
+              />
+            }
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </main>
     </>
-  )
+  );
 }
 
-export default App
+export default App;
