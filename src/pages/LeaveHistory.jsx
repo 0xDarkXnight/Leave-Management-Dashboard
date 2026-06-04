@@ -1,10 +1,12 @@
 import { useMemo, useState } from "react";
-import LeaveTable from "../components/LeaveTable";
 import { useNavigate } from "react-router-dom";
+import LeaveTable from "../components/LeaveTable";
+
+const STATUS_OPTIONS = ["All", "Pending", "Approved", "Rejected"];
 
 function LeaveHistory({ leaveRequests, onUpdateStatus, onDeleteRequest, onEditRequest }) {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("All");
+  const [searchTerm,   setSearch]  = useState("");
+  const [statusFilter, setStatus]  = useState("All");
 
   const navigate = useNavigate();
 
@@ -14,14 +16,9 @@ function LeaveHistory({ leaveRequests, onUpdateStatus, onDeleteRequest, onEditRe
   };
 
   const filteredRequests = useMemo(() => {
-    return leaveRequests.filter((request) => {
-      const matchesName = request.employeeName
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase());
-
-      const matchesStatus =
-        statusFilter === "All" || request.status === statusFilter;
-
+    return leaveRequests.filter((req) => {
+      const matchesName   = req.employeeName.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus = statusFilter === "All" || req.status === statusFilter;
       return matchesName && matchesStatus;
     });
   }, [leaveRequests, searchTerm, statusFilter]);
@@ -29,32 +26,59 @@ function LeaveHistory({ leaveRequests, onUpdateStatus, onDeleteRequest, onEditRe
   return (
     <section className="page">
       <div className="page-header">
-        <h2>Leave History</h2>
-        <p>Search and manage all submitted leave requests.</p>
+        <div className="page-header-left">
+          <h1>Leave History</h1>
+          <p>Search and manage all submitted leave requests.</p>
+        </div>
+        <div className="page-header-actions">
+          <span style={{
+            display: "inline-flex", alignItems: "center", gap: 6,
+            padding: "6px 14px",
+            background: "var(--clr-surface)", border: "1px solid var(--clr-border)",
+            borderRadius: "var(--r-pill)", fontSize: 13, color: "var(--clr-text-500)",
+            fontWeight: 600,
+          }}>
+            {filteredRequests.length} result{filteredRequests.length !== 1 ? "s" : ""}
+          </span>
+        </div>
       </div>
 
-      <div className="filters card">
-        <div className="form-group">
-          <label>Search by Employee Name</label>
+      <div className="filters-bar">
+        <div>
+          <label className="filter-label" htmlFor="search-name">
+            Search by Employee Name
+          </label>
           <input
+            id="search-name"
             type="text"
-            placeholder="Type employee name..."
+            placeholder="Type employee name…"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => setSearch(e.target.value)}
           />
         </div>
 
-        <div className="form-group">
-          <label>Filter by Status</label>
+        <div>
+          <label className="filter-label" htmlFor="status-filter">
+            Filter by Status
+          </label>
           <select
+            id="status-filter"
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) => setStatus(e.target.value)}
           >
-            <option value="All">All</option>
-            <option value="Pending">Pending</option>
-            <option value="Approved">Approved</option>
-            <option value="Rejected">Rejected</option>
+            {STATUS_OPTIONS.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
           </select>
+        </div>
+      </div>
+
+      <div className="table-card" style={{ overflow: "visible" }}>
+        <div className="table-card-header">
+          <h3>All Leave Requests</h3>
+          <span className="table-count-badge">
+            {filteredRequests.length} of {leaveRequests.length} total
+          </span>
         </div>
       </div>
 

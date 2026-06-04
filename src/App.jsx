@@ -1,33 +1,33 @@
-import { useEffect, useState } from "react";
-import { 
-  Navigate,
-  Route,
-  Routes 
-} from "react-router-dom";
+import { useState } from "react";
+import { Navigate, Route, Routes } from "react-router-dom";
 import Navbar from "./components/Navbar";
+import TopHeader from "./components/TopHeader";
 import Dashboard from "./pages/Dashboard";
 import ApplyLeave from "./pages/ApplyLeave";
 import LeaveHistory from "./pages/LeaveHistory";
+import { useEffect } from "react";
 
 const STORAGE_KEY = "leave_requests";
 
 function App() {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   const [leaveRequests, setLeaveRequests] = useState(() => {
     try {
       const storedData = localStorage.getItem(STORAGE_KEY);
       return storedData ? JSON.parse(storedData) : [];
-    } catch (error) {
-      console.error("Error reading from localStorage:", error);
+    } catch {
       return [];
     }
   });
 
   const [editingRequest, setEditingRequest] = useState(null);
-  const [requestToDelete, setRequestToDelete] = useState(null);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(leaveRequests));
   }, [leaveRequests]);
+
+  const closeSidebar = () => setSidebarOpen(false);
 
   const addLeaveRequest = (requestData) => {
     const newRequest = {
@@ -36,82 +36,70 @@ function App() {
       status: "Pending",
       createdAt: new Date().toISOString(),
     };
-
-    setLeaveRequests((prevRequests) => [newRequest, ...prevRequests]);
+    setLeaveRequests((prev) => [newRequest, ...prev]);
   };
 
   const updateLeaveStatus = (id, newStatus) => {
-    setLeaveRequests((prevRequests) =>
-      prevRequests.map((request) =>
-        request.id === id ? { ...request, status: newStatus } : request
-      )
+    setLeaveRequests((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, status: newStatus } : r))
     );
   };
 
   const deleteLeaveRequest = (id) => {
-    setLeaveRequests((prevRequests) =>
-      prevRequests.filter(
-        (request) => request.id !== id
-      )
-    );
+    setLeaveRequests((prev) => prev.filter((r) => r.id !== id));
   };
 
   const startEditingRequest = (id) => {
-    const request = leaveRequests.find(
-      (item) => item.id === id
-    );
-
-    if (!request) return;
-
-    setEditingRequest(request);
+    const request = leaveRequests.find((r) => r.id === id);
+    if (request) setEditingRequest(request);
   };
 
   const updateLeaveRequest = (updatedRequest) => {
-    setLeaveRequests((prevRequests) =>
-      prevRequests.map((request) =>
-        request.id === updatedRequest.id
-          ? updatedRequest
-          : request
-      )
+    setLeaveRequests((prev) =>
+      prev.map((r) => (r.id === updatedRequest.id ? updatedRequest : r))
     );
-
     setEditingRequest(null);
   };
 
   return (
-    <>
-      <Navbar />
-      <main className="container">
-        <Routes>
-          <Route
-            path="/"
-            element={<Dashboard leaveRequests={leaveRequests} />}
-          />
-          <Route
-            path="/apply"
-            element={
-              <ApplyLeave 
-              onAddLeave={addLeaveRequest}
-              editingRequest={editingRequest}
-              onUpdateLeave={updateLeaveRequest}
-              />
-            }
-          />
-          <Route
-            path="/history"
-            element={
-              <LeaveHistory
-                leaveRequests={leaveRequests}
-                onUpdateStatus={updateLeaveStatus}
-                onDeleteRequest={deleteLeaveRequest}
-                onEditRequest={startEditingRequest}
-              />
-            }
-          />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </main>
-    </>
+    <div className="app-shell">
+      <Navbar isOpen={sidebarOpen} onClose={closeSidebar} />
+
+      <div className="main-wrapper">
+        <TopHeader onMenuToggle={() => setSidebarOpen((o) => !o)} />
+
+        <main className="content-area">
+          <Routes>
+            <Route
+              path="/"
+              element={<Dashboard leaveRequests={leaveRequests} />}
+            />
+            <Route
+              path="/apply"
+              element={
+                <ApplyLeave
+                  onAddLeave={addLeaveRequest}
+                  editingRequest={editingRequest}
+                  onUpdateLeave={updateLeaveRequest}
+                />
+              }
+            />
+            <Route
+              path="/history"
+              element={
+                <LeaveHistory
+                  leaveRequests={leaveRequests}
+                  onUpdateStatus={updateLeaveStatus}
+                  onDeleteRequest={deleteLeaveRequest}
+                  onEditRequest={startEditingRequest}
+                />
+              }
+            />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </main>
+      </div>
+    </div>
   );
 }
 

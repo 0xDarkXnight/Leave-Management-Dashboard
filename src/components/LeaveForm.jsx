@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { PlusIcon, CheckIcon } from "./Icons";
 
 const initialFormState = {
   employeeName: "",
@@ -8,197 +9,161 @@ const initialFormState = {
   reason: "",
 };
 
-function LeaveForm({ 
-    onSubmit,
-    editingRequest,
-    onUpdateLeave
-}) {
-  const [formData, setFormData] = useState(initialFormState);
-  const [errors, setErrors] = useState({});
-  const [successMessage, setSuccessMessage] = useState("");
+const getFormData = (request) =>
+  request
+    ? {
+        employeeName: request.employeeName,
+        leaveType: request.leaveType,
+        startDate: request.startDate,
+        endDate: request.endDate,
+        reason: request.reason,
+      }
+    : initialFormState;
 
-  useEffect(() => {
-    if (editingRequest) {
-        setFormData({
-        employeeName:
-            editingRequest.employeeName,
-        leaveType:
-            editingRequest.leaveType,
-        startDate:
-            editingRequest.startDate,
-        endDate:
-            editingRequest.endDate,
-        reason:
-            editingRequest.reason,
-        });
-    }
-  }, [editingRequest]);
+function LeaveForm({ onSubmit, editingRequest, onUpdateLeave }) {
+  const [formData, setFormData]       = useState(() => getFormData(editingRequest));
+  const [errors, setErrors]           = useState({});
+  const [successMessage, setSuccess]  = useState("");
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prevData) => ({
-      ...prevData,
-      [name]: value,
-    }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const validateForm = () => {
-    const newErrors = {};
-
-    if (!formData.employeeName.trim()) {
-      newErrors.employeeName = "Employee name is required.";
-    }
-
-    if (!formData.leaveType) {
-      newErrors.leaveType = "Please select a leave type.";
-    }
-
-    if (!formData.startDate) {
-      newErrors.startDate = "Start date is required.";
-    }
-
-    if (!formData.endDate) {
-      newErrors.endDate = "End date is required.";
-    }
-
-    if (formData.startDate && formData.endDate) {
-      if (formData.endDate < formData.startDate) {
-        newErrors.endDate = "End date cannot be earlier than start date.";
-      }
-    }
-
-    if (!formData.reason.trim()) {
-      newErrors.reason = "Reason is required.";
-    }
-
-    return newErrors;
+    const errs = {};
+    if (!formData.employeeName.trim()) errs.employeeName = "Employee name is required.";
+    if (!formData.leaveType)           errs.leaveType    = "Please select a leave type.";
+    if (!formData.startDate)           errs.startDate    = "Start date is required.";
+    if (!formData.endDate)             errs.endDate      = "End date is required.";
+    if (formData.startDate && formData.endDate && formData.endDate < formData.startDate)
+      errs.endDate = "End date cannot be earlier than start date.";
+    if (!formData.reason.trim())       errs.reason       = "Reason is required.";
+    return errs;
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-
-    const validationErrors =
-        validateForm();
-
+    const validationErrors = validateForm();
     setErrors(validationErrors);
-
-    if (
-        Object.keys(validationErrors).length > 0
-    ) {
-        return;
-    }
+    if (Object.keys(validationErrors).length > 0) return;
 
     if (editingRequest) {
-        onUpdateLeave({
-        ...editingRequest,
-        ...formData,
-        });
-
-        setSuccessMessage(
-        "Leave request updated successfully."
-        );
+      onUpdateLeave({ ...editingRequest, ...formData });
+      setSuccess("Leave request updated successfully.");
     } else {
-        onSubmit(formData);
-
-        setSuccessMessage(
-        "Leave request submitted successfully."
-        );
+      onSubmit(formData);
+      setSuccess("Leave request submitted successfully.");
     }
 
     setFormData(initialFormState);
-
-    setTimeout(() => {
-        setSuccessMessage("");
-    }, 3000);
+    setTimeout(() => setSuccess(""), 4000);
   };
 
   return (
-    <form className="card form-card" onSubmit={handleSubmit}>
-      <div className="page-header">
-        <h2>
-          {editingRequest ? "Edit Leave Request" : "Apply for Leave"}
-        </h2>
-        <p>Fill out the form below to create a new leave request.</p>
+    <form className="form-shell" onSubmit={handleSubmit} noValidate>
+      <div className="form-shell-header">
+        <h2>{editingRequest ? "Edit Leave Request" : "Apply for Leave"}</h2>
+        <p>Fill out the details below to {editingRequest ? "update your" : "submit a new"} leave request.</p>
       </div>
 
-      {successMessage && <p className="success-text">{successMessage}</p>}
+      <div className="form-shell-body">
+        {successMessage && (
+          <div className="success-banner">
+            <CheckIcon /> {successMessage}
+          </div>
+        )}
 
-      <div className="form-grid">
-        <div className="form-group">
-          <label>Employee Name</label>
-          <input
-            type="text"
-            name="employeeName"
-            value={formData.employeeName}
-            onChange={handleChange}
-            placeholder="Enter employee name"
-          />
-          {errors.employeeName && (
-            <span className="error-text">{errors.employeeName}</span>
-          )}
+        <div className="form-grid">
+          <div className="form-group">
+            <label htmlFor="employeeName">Employee Name</label>
+            <input
+              id="employeeName" type="text" name="employeeName"
+              value={formData.employeeName}
+              onChange={handleChange}
+              placeholder="Enter your full name"
+            />
+            {errors.employeeName && (
+              <span className="error-text">⚠ {errors.employeeName}</span>
+            )}
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="leaveType">Leave Type</label>
+            <select
+              id="leaveType" name="leaveType"
+              value={formData.leaveType}
+              onChange={handleChange}
+            >
+              <option value="">Select leave type</option>
+              <option value="Sick Leave">Sick Leave</option>
+              <option value="Casual Leave">Casual Leave</option>
+              <option value="Annual Leave">Annual Leave</option>
+            </select>
+            {errors.leaveType && (
+              <span className="error-text">⚠ {errors.leaveType}</span>
+            )}
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="startDate">Start Date</label>
+            <input
+              id="startDate" type="date" name="startDate"
+              value={formData.startDate}
+              onChange={handleChange}
+            />
+            {errors.startDate && (
+              <span className="error-text">⚠ {errors.startDate}</span>
+            )}
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="endDate">End Date</label>
+            <input
+              id="endDate" type="date" name="endDate"
+              value={formData.endDate}
+              onChange={handleChange}
+            />
+            {errors.endDate && (
+              <span className="error-text">⚠ {errors.endDate}</span>
+            )}
+          </div>
+
+          <div className="form-group full-width">
+            <label htmlFor="reason">Reason for Leave</label>
+            <textarea
+              id="reason" name="reason"
+              value={formData.reason}
+              onChange={handleChange}
+              placeholder="Please describe the reason for your leave request…"
+            />
+            {errors.reason && (
+              <span className="error-text">⚠ {errors.reason}</span>
+            )}
+          </div>
         </div>
 
-        <div className="form-group">
-          <label>Leave Type</label>
-          <select
-            name="leaveType"
-            value={formData.leaveType}
-            onChange={handleChange}
-          >
-            <option value="">Select leave type</option>
-            <option value="Sick Leave">Sick Leave</option>
-            <option value="Casual Leave">Casual Leave</option>
-            <option value="Annual Leave">Annual Leave</option>
-          </select>
-          {errors.leaveType && (
-            <span className="error-text">{errors.leaveType}</span>
+        <div className="form-actions">
+          <button type="submit" className="btn-primary">
+            {editingRequest ? (
+              <><CheckIcon /> Update Request</>
+            ) : (
+              <><PlusIcon /> Submit Leave Request</>
+            )}
+          </button>
+          {editingRequest && (
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => {
+                setFormData(initialFormState);
+                onUpdateLeave({ ...editingRequest, cancel: true });
+              }}
+            >
+              Cancel Edit
+            </button>
           )}
         </div>
-
-        <div className="form-group">
-          <label>Start Date</label>
-          <input
-            type="date"
-            name="startDate"
-            value={formData.startDate}
-            onChange={handleChange}
-          />
-          {errors.startDate && (
-            <span className="error-text">{errors.startDate}</span>
-          )}
-        </div>
-
-        <div className="form-group">
-          <label>End Date</label>
-          <input
-            type="date"
-            name="endDate"
-            value={formData.endDate}
-            onChange={handleChange}
-          />
-          {errors.endDate && (
-            <span className="error-text">{errors.endDate}</span>
-          )}
-        </div>
-
-        <div className="form-group full-width">
-          <label>Reason</label>
-          <textarea
-            name="reason"
-            value={formData.reason}
-            onChange={handleChange}
-            placeholder="Enter the reason for leave"
-          />
-          {errors.reason && (
-            <span className="error-text">{errors.reason}</span>
-          )}
-        </div>
-      </div>
-
-      <div className="form-actions">
-        <button type="submit" className="btn-primary">
-          {editingRequest ? "Update Request" : "Submit Leave Request"}
-        </button>
       </div>
     </form>
   );
