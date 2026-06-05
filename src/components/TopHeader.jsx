@@ -2,9 +2,9 @@ import { useLocation } from "react-router-dom";
 import { MenuIcon, SearchIcon, BellIcon, HelpIcon, ChevronRight } from "./Icons";
 
 const BREADCRUMBS = {
-  "/":        "Dashboard",
-  "/apply":   "Apply Leave",
-  "/history": "Leave History",
+  "/dashboard": "Dashboard",
+  "/apply":     "Apply Leave",
+  "/history":   "Leave History",
 };
 
 function TopHeader({ onMenuToggle }) {

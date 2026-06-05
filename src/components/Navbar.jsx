@@ -5,9 +5,9 @@ import {
 } from "./Icons";
 
 const NAV_ITEMS = [
-  { to: "/",        label: "Dashboard",    Icon: DashboardIcon },
-  { to: "/apply",   label: "Apply Leave",  Icon: ApplyIcon },
-  { to: "/history", label: "Leave History",Icon: HistoryIcon },
+  { to: "/dashboard", label: "Dashboard",     Icon: DashboardIcon },
+  { to: "/apply",     label: "Apply Leave",   Icon: ApplyIcon },
+  { to: "/history",   label: "Leave History", Icon: HistoryIcon },
 ];
 
 function Navbar({ isOpen, onClose }) {

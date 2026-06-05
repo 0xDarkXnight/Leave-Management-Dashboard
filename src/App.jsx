@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
-import Navbar from "./components/Navbar";
-import TopHeader from "./components/TopHeader";
+
 import Dashboard from "./pages/Dashboard";
 import ApplyLeave from "./pages/ApplyLeave";
 import LeaveHistory from "./pages/LeaveHistory";
-import { useEffect } from "react";
+import LoginPage from "./pages/LoginPage";
+
+import AppShellLayout from "./layouts/AppShellLayout";
 
 const STORAGE_KEY = "leave_requests";
 
@@ -36,70 +37,94 @@ function App() {
       status: "Pending",
       createdAt: new Date().toISOString(),
     };
+
     setLeaveRequests((prev) => [newRequest, ...prev]);
   };
 
   const updateLeaveStatus = (id, newStatus) => {
     setLeaveRequests((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, status: newStatus } : r))
+      prev.map((request) =>
+        request.id === id
+          ? { ...request, status: newStatus }
+          : request
+      )
     );
   };
 
   const deleteLeaveRequest = (id) => {
-    setLeaveRequests((prev) => prev.filter((r) => r.id !== id));
+    setLeaveRequests((prev) =>
+      prev.filter((request) => request.id !== id)
+    );
   };
 
   const startEditingRequest = (id) => {
-    const request = leaveRequests.find((r) => r.id === id);
-    if (request) setEditingRequest(request);
+    const request = leaveRequests.find(
+      (request) => request.id === id
+    );
+
+    if (request) {
+      setEditingRequest(request);
+    }
   };
 
   const updateLeaveRequest = (updatedRequest) => {
     setLeaveRequests((prev) =>
-      prev.map((r) => (r.id === updatedRequest.id ? updatedRequest : r))
+      prev.map((request) =>
+        request.id === updatedRequest.id
+          ? updatedRequest
+          : request
+      )
     );
+
     setEditingRequest(null);
   };
 
   return (
-    <div className="app-shell">
-      <Navbar isOpen={sidebarOpen} onClose={closeSidebar} />
+    <Routes>
+      <Route path="/" element={<LoginPage />} />
 
-      <div className="main-wrapper">
-        <TopHeader onMenuToggle={() => setSidebarOpen((o) => !o)} />
+      <Route
+        element={
+          <AppShellLayout
+            sidebarOpen={sidebarOpen}
+            closeSidebar={closeSidebar}
+            setSidebarOpen={setSidebarOpen}
+          />
+        }
+      >
+        <Route
+          path="/dashboard"
+          element={
+            <Dashboard leaveRequests={leaveRequests} />
+          }
+        />
 
-        <main className="content-area">
-          <Routes>
-            <Route
-              path="/"
-              element={<Dashboard leaveRequests={leaveRequests} />}
+        <Route
+          path="/apply"
+          element={
+            <ApplyLeave
+              onAddLeave={addLeaveRequest}
+              editingRequest={editingRequest}
+              onUpdateLeave={updateLeaveRequest}
             />
-            <Route
-              path="/apply"
-              element={
-                <ApplyLeave
-                  onAddLeave={addLeaveRequest}
-                  editingRequest={editingRequest}
-                  onUpdateLeave={updateLeaveRequest}
-                />
-              }
+          }
+        />
+
+        <Route
+          path="/history"
+          element={
+            <LeaveHistory
+              leaveRequests={leaveRequests}
+              onUpdateStatus={updateLeaveStatus}
+              onDeleteRequest={deleteLeaveRequest}
+              onEditRequest={startEditingRequest}
             />
-            <Route
-              path="/history"
-              element={
-                <LeaveHistory
-                  leaveRequests={leaveRequests}
-                  onUpdateStatus={updateLeaveStatus}
-                  onDeleteRequest={deleteLeaveRequest}
-                  onEditRequest={startEditingRequest}
-                />
-              }
-            />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </main>
-      </div>
-    </div>
+          }
+        />
+
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Route>
+    </Routes>
   );
 }
 
