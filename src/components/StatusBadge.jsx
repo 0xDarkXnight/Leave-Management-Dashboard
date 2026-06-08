@@ -1,0 +1,10 @@
+function StatusBadge({ status }) {
+  if (!status) return null;
+  return (
+    <span className={`status-badge status-${status.toLowerCase()}`}>
+      {status}
+    </span>
+  );
+}
+
+export default StatusBadge;

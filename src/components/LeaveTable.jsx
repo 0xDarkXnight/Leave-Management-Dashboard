@@ -1,22 +1,34 @@
-function LeaveTable({ requests, onStatusChange, onDelete, onEdit }) {
-  const formatDate = (d) =>
-    d
-      ? new Date(d).toLocaleDateString("en-GB", {
-          day: "2-digit", month: "short", year: "numeric",
-        })
-      : "—";
+import StatusBadge from "./StatusBadge";
+import { CheckIcon, XIcon, EditIcon, TrashIcon } from "./Icons";
 
-  const calcDays = (start, end) => {
-    const diff = Math.ceil(
-      (new Date(end) - new Date(start)) / (1000 * 60 * 60 * 24)
-    );
-    return diff + 1;
-  };
+const fmtDate = (d) =>
+  d
+    ? new Date(d).toLocaleDateString("en-GB", {
+        day: "2-digit", month: "short", year: "numeric",
+      })
+    : "—";
 
-  const initials = (name) =>
-    name
-      ? name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2)
-      : "?";
+const calcDays = (start, end) => {
+  if (!start || !end) return 0;
+  return (
+    Math.ceil((new Date(end) - new Date(start)) / (1000 * 60 * 60 * 24)) + 1
+  );
+};
+
+const initials = (name) =>
+  name
+    ? name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2)
+    : "?";
+
+function LeaveTable({
+  requests,
+  userRole = "Employee",
+  onApprove,
+  onReject,
+  onDelete,
+  onEdit,
+}) {
+  const isManager = userRole === "Manager";
 
   if (requests.length === 0) {
     return (
@@ -41,8 +53,9 @@ function LeaveTable({ requests, onStatusChange, onDelete, onEdit }) {
               <th>Start Date</th>
               <th>End Date</th>
               <th>Duration</th>
+              {isManager && <th>Reason</th>}
+              {isManager && <th>Submitted</th>}
               <th>Status</th>
-              <th>Update Status</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -51,53 +64,79 @@ function LeaveTable({ requests, onStatusChange, onDelete, onEdit }) {
               <tr key={req.id}>
                 <td>
                   <div className="employee-cell">
-                    <div className="emp-avatar">{initials(req.employeeName)}</div>
+                    <div className={`emp-avatar${isManager ? " emp-avatar--manager" : ""}`}>
+                      {initials(req.employeeName)}
+                    </div>
                     <span className="emp-name">{req.employeeName}</span>
                   </div>
                 </td>
+
                 <td>
                   <span className="leave-type-chip">{req.leaveType}</span>
                 </td>
-                <td>{formatDate(req.startDate)}</td>
-                <td>{formatDate(req.endDate)}</td>
+
+                <td>{fmtDate(req.startDate)}</td>
+                <td>{fmtDate(req.endDate)}</td>
+
                 <td>
                   <strong>{calcDays(req.startDate, req.endDate)}</strong>
                   <span style={{ color: "var(--clr-text-300)", marginLeft: 4 }}>days</span>
                 </td>
+
+                {isManager && (
+                  <td>
+                    <span className="reason-cell" title={req.reason}>
+                      {req.reason || <span style={{ color: "var(--clr-text-300)" }}>—</span>}
+                    </span>
+                  </td>
+                )}
+
+                {isManager && <td>{fmtDate(req.createdAt)}</td>}
+
+                <td><StatusBadge status={req.status}/></td>
+
                 <td>
-                  <span className={`status-badge status-${req.status.toLowerCase()}`}>
-                    {req.status}
-                  </span>
-                </td>
-                <td>
-                  <select
-                    className="status-select"
-                    value={req.status}
-                    onChange={(e) => onStatusChange(req.id, e.target.value)}
-                    aria-label={`Change status for ${req.employeeName}`}
-                  >
-                    <option value="Pending">Pending</option>
-                    <option value="Approved">Approved</option>
-                    <option value="Rejected">Rejected</option>
-                  </select>
-                </td>
-                <td>
-                  <div className="action-buttons">
-                    <button
-                      className="edit-btn"
-                      onClick={() => onEdit(req.id)}
-                      type="button"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      className="delete-btn"
-                      onClick={() => onDelete(req.id)}
-                      type="button"
-                    >
-                      Delete
-                    </button>
-                  </div>
+                  {isManager ? (
+                    <div className="action-buttons action-buttons--manager">
+                      <button
+                        type="button"
+                        className="approve-btn"
+                        disabled={req.status === "Approved"}
+                        onClick={() => onApprove?.(req)}
+                        aria-label={`Approve ${req.employeeName}'s request`}
+                      >
+                        <CheckIcon/> Approve
+                      </button>
+                      <button
+                        type="button"
+                        className="reject-btn"
+                        disabled={req.status === "Rejected"}
+                        onClick={() => onReject?.(req)}
+                        aria-label={`Reject ${req.employeeName}'s request`}
+                      >
+                        <XIcon/> Reject
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="action-buttons">
+                      <button
+                        type="button"
+                        className="edit-btn"
+                        onClick={() => onEdit?.(req.id)}
+                        aria-label={`Edit request`}
+                      >
+                        <EditIcon/> Edit
+                      </button>
+                      <button
+                        type="button"
+                        className="delete-btn"
+                        onClick={() => onDelete?.(req)}
+                        aria-label={`Delete request`}
+                      >
+                        <TrashIcon/> Delete
+                      </button>
+                    </div>
+                  )}
                 </td>
               </tr>
             ))}
@@ -110,12 +149,19 @@ function LeaveTable({ requests, onStatusChange, onDelete, onEdit }) {
           <div key={req.id} className="mobile-card">
             <div className="mc-header">
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <div className="emp-avatar">{initials(req.employeeName)}</div>
-                <span className="mc-name">{req.employeeName}</span>
+                <div className={`emp-avatar${isManager ? " emp-avatar--manager" : ""}`}>
+                  {initials(req.employeeName)}
+                </div>
+                <div>
+                  <div className="mc-name">{req.employeeName}</div>
+                  {isManager && (
+                    <div style={{ fontSize: 11, color: "var(--clr-text-300)", marginTop: 2 }}>
+                      Submitted {fmtDate(req.createdAt)}
+                    </div>
+                  )}
+                </div>
               </div>
-              <span className={`status-badge status-${req.status.toLowerCase()}`}>
-                {req.status}
-              </span>
+              <StatusBadge status={req.status}/>
             </div>
 
             <div className="mc-meta">
@@ -129,30 +175,51 @@ function LeaveTable({ requests, onStatusChange, onDelete, onEdit }) {
               </div>
               <div className="mc-meta-item">
                 <label>Start Date</label>
-                <span>{formatDate(req.startDate)}</span>
+                <span>{fmtDate(req.startDate)}</span>
               </div>
               <div className="mc-meta-item">
                 <label>End Date</label>
-                <span>{formatDate(req.endDate)}</span>
+                <span>{fmtDate(req.endDate)}</span>
               </div>
             </div>
 
+            {isManager && req.reason && (
+              <div className="mc-reason">
+                <span className="mc-reason-label">Reason</span>
+                <span>{req.reason}</span>
+              </div>
+            )}
+
             <div className="mc-footer">
-              <select
-                className="status-select"
-                value={req.status}
-                onChange={(e) => onStatusChange(req.id, e.target.value)}
-              >
-                <option value="Pending">Pending</option>
-                <option value="Approved">Approved</option>
-                <option value="Rejected">Rejected</option>
-              </select>
-              <button className="edit-btn" onClick={() => onEdit(req.id)} type="button">
-                Edit
-              </button>
-              <button className="delete-btn" onClick={() => onDelete(req.id)} type="button">
-                Delete
-              </button>
+              {isManager ? (
+                <>
+                  <button
+                    type="button"
+                    className="approve-btn"
+                    disabled={req.status === "Approved"}
+                    onClick={() => onApprove?.(req)}
+                  >
+                    <CheckIcon/> Approve
+                  </button>
+                  <button
+                    type="button"
+                    className="reject-btn"
+                    disabled={req.status === "Rejected"}
+                    onClick={() => onReject?.(req)}
+                  >
+                    <XIcon/> Reject
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button type="button" className="edit-btn" onClick={() => onEdit?.(req.id)}>
+                    <EditIcon/> Edit
+                  </button>
+                  <button type="button" className="delete-btn" onClick={() => onDelete?.(req)}>
+                    <TrashIcon/> Delete
+                  </button>
+                </>
+              )}
             </div>
           </div>
         ))}

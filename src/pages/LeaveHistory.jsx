@@ -1,14 +1,35 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import LeaveTable from "../components/LeaveTable";
+import { useNavigate }       from "react-router-dom";
+import LeaveTable            from "../components/LeaveTable";
+import ConfirmModal          from "../components/ConfirmModal";
 
 const STATUS_OPTIONS = ["All", "Pending", "Approved", "Rejected"];
 
-function LeaveHistory({ leaveRequests, onUpdateStatus, onDeleteRequest, onEditRequest }) {
+function LeaveHistory({
+  leaveRequests,
+  onUpdateStatus,
+  onDeleteRequest,
+  onEditRequest,
+  userRole = "Employee",
+}) {
+  const navigate    = useNavigate();
+  const isManager   = userRole === "Manager";
+
   const [searchTerm,   setSearch]  = useState("");
   const [statusFilter, setStatus]  = useState("All");
 
-  const navigate = useNavigate();
+  const [modal, setModal] = useState({ open: false, type: null, request: null });
+
+  const openModal  = (type, request) => setModal({ open: true, type, request });
+  const closeModal = () => setModal({ open: false, type: null, request: null });
+
+  const handleConfirm = () => {
+    const { type, request } = modal;
+    if (type === "approve") onUpdateStatus(request.id, "Approved");
+    if (type === "reject")  onUpdateStatus(request.id, "Rejected");
+    if (type === "delete")  onDeleteRequest(request.id);
+    closeModal();
+  };
 
   const handleEdit = (id) => {
     onEditRequest(id);
@@ -17,8 +38,11 @@ function LeaveHistory({ leaveRequests, onUpdateStatus, onDeleteRequest, onEditRe
 
   const filteredRequests = useMemo(() => {
     return leaveRequests.filter((req) => {
-      const matchesName   = req.employeeName.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesStatus = statusFilter === "All" || req.status === statusFilter;
+      const matchesName   = req.employeeName
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase());
+      const matchesStatus =
+        statusFilter === "All" || req.status === statusFilter;
       return matchesName && matchesStatus;
     });
   }, [leaveRequests, searchTerm, statusFilter]);
@@ -27,17 +51,15 @@ function LeaveHistory({ leaveRequests, onUpdateStatus, onDeleteRequest, onEditRe
     <section className="page">
       <div className="page-header">
         <div className="page-header-left">
-          <h1>Leave History</h1>
-          <p>Search and manage all submitted leave requests.</p>
+          <h1>{isManager ? "All Requests" : "Leave History"}</h1>
+          <p>
+            {isManager
+              ? "Review, filter, and take action on all team leave requests."
+              : "Search and manage your submitted leave requests."}
+          </p>
         </div>
         <div className="page-header-actions">
-          <span style={{
-            display: "inline-flex", alignItems: "center", gap: 6,
-            padding: "6px 14px",
-            background: "var(--clr-surface)", border: "1px solid var(--clr-border)",
-            borderRadius: "var(--r-pill)", fontSize: 13, color: "var(--clr-text-500)",
-            fontWeight: 600,
-          }}>
+          <span className="table-count-badge" style={{ padding: "7px 14px" }}>
             {filteredRequests.length} result{filteredRequests.length !== 1 ? "s" : ""}
           </span>
         </div>
@@ -46,12 +68,12 @@ function LeaveHistory({ leaveRequests, onUpdateStatus, onDeleteRequest, onEditRe
       <div className="filters-bar">
         <div>
           <label className="filter-label" htmlFor="search-name">
-            Search by Employee Name
+            {isManager ? "Search by Employee Name" : "Search Requests"}
           </label>
           <input
             id="search-name"
             type="text"
-            placeholder="Type employee name…"
+            placeholder={isManager ? "Type employee name…" : "Type to search…"}
             value={searchTerm}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -75,7 +97,7 @@ function LeaveHistory({ leaveRequests, onUpdateStatus, onDeleteRequest, onEditRe
 
       <div className="table-card" style={{ overflow: "visible" }}>
         <div className="table-card-header">
-          <h3>All Leave Requests</h3>
+          <h3>{isManager ? "All Leave Requests" : "My Leave Requests"}</h3>
           <span className="table-count-badge">
             {filteredRequests.length} of {leaveRequests.length} total
           </span>
@@ -84,9 +106,19 @@ function LeaveHistory({ leaveRequests, onUpdateStatus, onDeleteRequest, onEditRe
 
       <LeaveTable
         requests={filteredRequests}
-        onStatusChange={onUpdateStatus}
-        onDelete={onDeleteRequest}
+        userRole={userRole}
+        onApprove={(req) => openModal("approve", req)}
+        onReject={(req)  => openModal("reject",  req)}
+        onDelete={(req)  => openModal("delete",  req)}
         onEdit={handleEdit}
+      />
+
+      <ConfirmModal
+        isOpen={modal.open}
+        type={modal.type}
+        request={modal.request}
+        onConfirm={handleConfirm}
+        onCancel={closeModal}
       />
     </section>
   );
