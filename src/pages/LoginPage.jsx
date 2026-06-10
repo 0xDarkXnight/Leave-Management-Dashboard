@@ -1,34 +1,38 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../auth/useAuth";
 
 const ROLE_DATA = {
   Employee: {
-    emoji: "👤",
+    emoji:    "👤",
     headline: "Manage your\ntime off.",
-    desc: "Submit leave requests, track approvals, and manage your calendar — all from one clean dashboard.",
+    desc:     "Submit leave requests, track approvals, and manage your calendar — all from one clean dashboard.",
     features: [
       { icon: "📅", title: "Apply for Leave",    desc: "Submit sick, casual, or annual leave requests in under a minute." },
       { icon: "📋", title: "View Leave History", desc: "A full timeline of every request you've submitted, with live status." },
       { icon: "🔔", title: "Real-time Updates",  desc: "Status changes appear instantly — no page refresh needed." },
     ],
     capabilities: ["Apply for leave", "View leave history", "Track request status"],
-    placeholder: "employee@company.com",
+    demoEmail:    "employee@lms.com",
+    demoPassword: "employee123",
+    accentClass:  "",
   },
   Manager: {
-    emoji: "🏢",
+    emoji:    "🏢",
     headline: "Lead your\nteam smarter.",
-    desc: "Get a bird's-eye view of every team leave request. Approve or reject with full context — instantly.",
+    desc:     "Get a bird's-eye view of every team leave request. Approve or reject with full context — instantly.",
     features: [
       { icon: "👥", title: "All Leave Requests", desc: "See every pending and historical request across your entire team." },
       { icon: "✅", title: "Approve / Reject",   desc: "Take action on requests with a confirmation step for accuracy." },
       { icon: "📊", title: "Team Overview",      desc: "Dashboard analytics to track attendance patterns at a glance." },
     ],
     capabilities: ["View all team requests", "Approve / Reject requests", "Manage team attendance"],
-    placeholder: "manager@company.com",
+    demoEmail:    "manager@lms.com",
+    demoPassword: "manager123",
+    accentClass:  "login-submit-btn--manager",
   },
 };
 
-/* ── Inline SVG icons (self-contained) ── */
 const EmailIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
     strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -60,27 +64,90 @@ const CheckMiniIcon = () => (
   </svg>
 );
 
-/* ── LoginPage ── */
-function LoginPage({ onLogin }) {
-  const [selectedRole, setSelectedRole] = useState("Employee");
-  const [showPassword, setShowPassword] = useState(false);
-  const navigate = useNavigate();
-  const data = ROLE_DATA[selectedRole];
+const AlertTriangleIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
+    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+    <line x1="12" y1="9" x2="12" y2="13"/>
+    <line x1="12" y1="17" x2="12.01" y2="17"/>
+  </svg>
+);
 
-  const handleLogin = () => {
-    onLogin(selectedRole);
-    navigate(selectedRole === "Manager" ? "/manager" : "/dashboard");
+const EyeIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+    <circle cx="12" cy="12" r="3"/>
+  </svg>
+);
+
+const EyeOffIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+    <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+    <line x1="1" y1="1" x2="23" y2="23"/>
+  </svg>
+);
+
+function LoginPage() {
+  const [selectedRole, setSelectedRole] = useState("Employee");
+  const [email,        setEmail]        = useState("");
+  const [password,     setPassword]     = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [authError,    setAuthError]    = useState("");
+  const [isLoading,    setIsLoading]    = useState(false);
+
+  const { login }  = useAuth();
+  const navigate   = useNavigate();
+  const data       = ROLE_DATA[selectedRole];
+
+  const handleRoleSelect = (role) => {
+    setSelectedRole(role);
+    setAuthError("");
   };
 
-  const handleLogoClick = () => {
-    const storedRole = localStorage.getItem("lms_role") || "Employee";
-    navigate(storedRole === "Manager" ? "/manager" : "/dashboard");
+  const fillDemo = (role) => {
+    setEmail(ROLE_DATA[role].demoEmail);
+    setPassword(ROLE_DATA[role].demoPassword);
+    setSelectedRole(role);
+    setAuthError("");
+  };
+
+  const handleSubmit = () => {
+    if (!email.trim()) {
+      setAuthError("Please enter your email address.");
+      return;
+    }
+    if (!password) {
+      setAuthError("Please enter your password.");
+      return;
+    }
+
+    setIsLoading(true);
+    setAuthError("");
+
+    setTimeout(() => {
+      const result = login(email, password);
+      setIsLoading(false);
+
+      if (!result.success) {
+        setAuthError(result.error);
+        return;
+      }
+
+      navigate(result.user.role === "Manager" ? "/manager" : "/dashboard", {
+        replace: true,
+      });
+    }, 380);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" && !isLoading) handleSubmit();
   };
 
   return (
     <div className="login-shell">
-
-      {/* ── Left: Brand panel ── */}
       <div className="login-brand-panel">
         <div className="login-bg-shapes" aria-hidden="true">
           <div className="lbs-circle lbs-c1"/>
@@ -90,14 +157,13 @@ function LoginPage({ onLogin }) {
         </div>
 
         <div className="login-brand-content">
-          <button type="button" className="login-logomark" onClick={handleLogoClick}
-            aria-label="LMS — Go to dashboard">
+          <div className="login-logomark" aria-label="LMS — Leave Management System">
             <div className="login-logomark-icon" aria-hidden="true">LM</div>
             <div>
               <div className="login-logomark-name">LMS</div>
               <div className="login-logomark-sub">Leave Management System</div>
             </div>
-          </button>
+          </div>
 
           <div className="login-brand-hero">
             <h2 className="login-brand-heading">
@@ -112,8 +178,11 @@ function LoginPage({ onLogin }) {
 
           <div className="login-features" key={selectedRole}>
             {data.features.map((feat, idx) => (
-              <div key={feat.title} className="login-feat-card"
-                style={{ animationDelay: `${idx * 0.08}s` }}>
+              <div
+                key={feat.title}
+                className="login-feat-card"
+                style={{ animationDelay: `${idx * 0.08}s` }}
+              >
                 <div className="lfc-icon" aria-hidden="true">{feat.icon}</div>
                 <div className="lfc-body">
                   <div className="lfc-title">{feat.title}</div>
@@ -130,24 +199,19 @@ function LoginPage({ onLogin }) {
         </div>
       </div>
 
-      {/* ── Right: Form panel ── */}
       <div className="login-form-panel">
         <div className="login-form-wrap">
-
-          {/* Mobile logo */}
-          <button type="button" className="login-mobile-logo" onClick={handleLogoClick}
-            aria-label="LMS — Go to dashboard">
+          <div className="login-mobile-logo" aria-label="LMS — Leave Management System">
             <div className="login-mobile-logo-icon">LM</div>
             <div className="login-mobile-logo-text">Leave Management System</div>
-          </button>
+          </div>
 
           <div className="login-form-header">
             <h1 className="login-form-title">Welcome back</h1>
             <p className="login-form-subtitle">Sign in to your workspace to continue</p>
           </div>
 
-          {/* Role selector */}
-          <div className="login-role-selector" role="group" aria-label="Select your role">
+          <div className="login-role-selector" role="group" aria-label="Preview role">
             <div className="login-role-selector-label">Sign in as</div>
             <div className="login-role-tabs">
               {["Employee", "Manager"].map((role) => (
@@ -155,7 +219,7 @@ function LoginPage({ onLogin }) {
                   key={role}
                   type="button"
                   className={`login-role-tab${selectedRole === role ? " lrt-active" : ""}`}
-                  onClick={() => setSelectedRole(role)}
+                  onClick={() => handleRoleSelect(role)}
                   aria-pressed={selectedRole === role}
                 >
                   <span className="lrt-emoji" aria-hidden="true">
@@ -172,7 +236,35 @@ function LoginPage({ onLogin }) {
             </div>
           </div>
 
-          {/* Fields */}
+          <div className="login-cred-helper" role="region" aria-label="Demo credentials">
+            <span className="login-cred-helper-label">Quick fill:</span>
+            <button
+              type="button"
+              className="login-cred-pill"
+              onClick={() => fillDemo("Employee")}
+              aria-label="Fill employee demo credentials"
+            >
+              <span className="login-cred-pill-dot" aria-hidden="true"/>
+              Employee demo
+            </button>
+            <button
+              type="button"
+              className="login-cred-pill login-cred-pill--manager"
+              onClick={() => fillDemo("Manager")}
+              aria-label="Fill manager demo credentials"
+            >
+              <span className="login-cred-pill-dot" aria-hidden="true"/>
+              Manager demo
+            </button>
+          </div>
+
+          {authError && (
+            <div className="login-error-banner" role="alert" aria-live="assertive">
+              <AlertTriangleIcon/>
+              <span>{authError}</span>
+            </div>
+          )}
+
           <div className="login-fields">
             <div className="login-field-group">
               <label htmlFor="login-email" className="login-field-label">
@@ -185,9 +277,14 @@ function LoginPage({ onLogin }) {
                 <input
                   id="login-email"
                   type="email"
-                  className="login-input"
-                  placeholder={data.placeholder}
+                  className={`login-input${authError ? " login-input--error" : ""}`}
+                  placeholder={data.demoEmail}
+                  value={email}
+                  onChange={(e) => { setEmail(e.target.value); setAuthError(""); }}
+                  onKeyDown={handleKeyDown}
                   autoComplete="email"
+                  disabled={isLoading}
+                  aria-describedby={authError ? "login-error" : undefined}
                 />
               </div>
             </div>
@@ -197,9 +294,6 @@ function LoginPage({ onLogin }) {
                 <label htmlFor="login-password" className="login-field-label">
                   Password
                 </label>
-                <button type="button" className="login-forgot-btn">
-                  Forgot password?
-                </button>
               </div>
               <div className="login-input-wrap">
                 <span className="login-input-adornment" aria-hidden="true">
@@ -208,17 +302,22 @@ function LoginPage({ onLogin }) {
                 <input
                   id="login-password"
                   type={showPassword ? "text" : "password"}
-                  className="login-input login-input--pw"
+                  className={`login-input login-input--pw${authError ? " login-input--error" : ""}`}
                   placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => { setPassword(e.target.value); setAuthError(""); }}
+                  onKeyDown={handleKeyDown}
                   autoComplete="current-password"
+                  disabled={isLoading}
                 />
                 <button
                   type="button"
                   className="login-pw-toggle"
                   onClick={() => setShowPassword((v) => !v)}
                   aria-label={showPassword ? "Hide password" : "Show password"}
+                  disabled={isLoading}
                 >
-                  {showPassword ? "Hide" : "Show"}
+                  {showPassword ? <EyeOffIcon/> : <EyeIcon/>}
                 </button>
               </div>
             </div>
@@ -227,15 +326,26 @@ function LoginPage({ onLogin }) {
           <button
             type="button"
             className={`login-submit-btn${selectedRole === "Manager" ? " login-submit-btn--manager" : ""}`}
-            onClick={handleLogin}
+            onClick={handleSubmit}
+            disabled={isLoading}
+            aria-busy={isLoading}
           >
-            <span>Sign in as {selectedRole}</span>
-            <ArrowRightIcon/>
+            {isLoading ? (
+              <>
+                <span className="login-spinner" aria-hidden="true"/>
+                Signing in…
+              </>
+            ) : (
+              <>
+                <span>Sign in as {selectedRole}</span>
+                <ArrowRightIcon/>
+              </>
+            )}
           </button>
 
           <div className="login-demo-notice" role="status">
             <span className="login-demo-dot" aria-hidden="true"/>
-            Demo — select a role and click Sign In to explore
+            Demo — click a quick-fill pill above, then Sign In
           </div>
 
           <div className="login-divider" aria-hidden="true">
@@ -262,7 +372,6 @@ function LoginPage({ onLogin }) {
               ))}
             </ul>
           </div>
-
         </div>
       </div>
     </div>

@@ -1883,3 +1883,179 @@ tbody tr:hover td { background: var(--clr-bg); }
   letter-spacing: 0.5px;
   color: var(--clr-text-300);
 }
+
+.login-error-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--clr-danger-light);
+  border: 1px solid var(--clr-danger-border);
+  border-radius: var(--r-sm);
+  color: var(--clr-danger);
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.45;
+  margin-bottom: 4px;
+  animation: lms-error-shake 0.38s ease;
+}
+
+@keyframes lms-error-shake {
+  0%, 100% { transform: translateX(0);   }
+  20%       { transform: translateX(-5px); }
+  40%       { transform: translateX(5px);  }
+  60%       { transform: translateX(-3px); }
+  80%       { transform: translateX(3px);  }
+}
+
+.login-input--error {
+  border-color: var(--clr-danger) !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12) !important;
+}
+
+.login-cred-helper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+  margin-bottom: 6px;
+}
+
+.login-cred-helper-label {
+  font-size: 11.5px;
+  color: var(--clr-text-300);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.login-cred-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border-radius: var(--r-pill);
+  border: 1.5px solid var(--clr-border);
+  background: var(--clr-surface);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--clr-text-700);
+  cursor: pointer;
+  transition: border-color var(--t-fast), color var(--t-fast), background var(--t-fast);
+}
+
+.login-cred-pill:hover {
+  border-color: var(--clr-primary-border);
+  color: var(--clr-primary);
+  background: var(--clr-primary-light);
+}
+
+.login-cred-pill--manager:hover {
+  border-color: #fcd34d;
+  color: #d97706;
+  background: #fffbeb;
+}
+
+.login-cred-pill-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--clr-primary);
+  flex-shrink: 0;
+}
+
+.login-cred-pill--manager .login-cred-pill-dot {
+  background: #d97706;
+}
+
+.login-submit-btn:disabled {
+  opacity: 0.72;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.login-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2.5px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: lms-spin 0.65s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes lms-spin {
+  to { transform: rotate(360deg); }
+}
+
+.login-pw-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  color: var(--clr-text-300);
+  transition: color var(--t-fast);
+  font-size: unset;
+  padding: 0;
+}
+
+.login-pw-toggle:hover {
+  color: var(--clr-text-700);
+}
+
+.access-denied {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 72px 24px 80px;
+  max-width: 440px;
+  margin: 0 auto;
+}
+
+.access-denied-icon-wrap {
+  width: 84px;
+  height: 84px;
+  background: var(--clr-danger-light);
+  border: 1px solid var(--clr-danger-border);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 22px;
+}
+
+.access-denied-icon {
+  font-size: 38px;
+  line-height: 1;
+}
+
+.access-denied-title {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--clr-text-900);
+  margin-bottom: 12px;
+  letter-spacing: -0.3px;
+}
+
+.access-denied-desc {
+  font-size: 14.5px;
+  color: var(--clr-text-500);
+  line-height: 1.65;
+  margin-bottom: 28px;
+}
+
+.access-denied-highlight {
+  color: var(--clr-primary);
+  font-weight: 600;
+}
+
+.access-denied-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}

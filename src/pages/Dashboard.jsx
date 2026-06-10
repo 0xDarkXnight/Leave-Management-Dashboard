@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { useAuth }     from "../auth/useAuth";
 import SummaryCard from "../components/SummaryCard";
 import StatusBadge from "../components/StatusBadge";
 import { PlusIcon } from "../components/Icons";
@@ -11,7 +12,9 @@ const fmtDate = (d) =>
     : "—";
 
 function Dashboard({ leaveRequests }) {
-  const navigate = useNavigate();
+  const navigate    = useNavigate();
+  const { user }    = useAuth();
+  const firstName   = user?.name?.split(" ")[0] ?? "there";
 
   const total    = leaveRequests.length;
   const pending  = leaveRequests.filter((r) => r.status === "Pending").length;
@@ -26,7 +29,7 @@ function Dashboard({ leaveRequests }) {
         <div className="page-header-left">
           <h1>Employee Dashboard</h1>
           <p>
-            Welcome back, John. You have{" "}
+            Welcome back, {firstName}. You have{" "}
             <strong style={{ color: "var(--clr-warning)" }}>
               {pending} leave request{pending !== 1 ? "s" : ""}
             </strong>{" "}

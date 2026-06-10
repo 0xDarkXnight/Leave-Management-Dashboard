@@ -1,53 +1,36 @@
 import { useState, useEffect } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 
+import { useAuth }                        from "./auth/useAuth";
+import { loadLeaveRequests, saveLeaveRequests } from "./auth/storage";
+
 import Dashboard        from "./pages/Dashboard";
 import ApplyLeave       from "./pages/ApplyLeave";
 import LeaveHistory     from "./pages/LeaveHistory";
 import LoginPage        from "./pages/LoginPage";
 import ManagerDashboard from "./pages/ManagerDashboard";
 import AppShellLayout   from "./layouts/AppShellLayout";
-
-const STORAGE_KEY   = "lms_leave_requests";
-const ROLE_STORAGE  = "lms_role";
+import ProtectedRoute   from "./components/ProtectedRoute";
+import RoleGuard        from "./components/RoleGuard";
 
 function App() {
+  const { isAuthenticated, user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const [userRole, setUserRole] = useState(
-    () => localStorage.getItem(ROLE_STORAGE) || "Employee"
+  const [leaveRequests, setLeaveRequests] = useState(() =>
+    loadLeaveRequests()
   );
-
-  const [leaveRequests, setLeaveRequests] = useState(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
-  });
-
   const [editingRequest, setEditingRequest] = useState(null);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(leaveRequests));
+    saveLeaveRequests(leaveRequests);
   }, [leaveRequests]);
-
-  const handleLogin = (role) => {
-    setUserRole(role);
-    localStorage.setItem(ROLE_STORAGE, role);
-  };
-
-  const handleLogout = () => {
-    setUserRole("Employee");
-    localStorage.removeItem(ROLE_STORAGE);
-  };
 
   const closeSidebar = () => setSidebarOpen(false);
 
   const addLeaveRequest = (requestData) => {
     const newRequest = {
-      id: Date.now(),
+      id:        Date.now(),
       ...requestData,
       status:    "Pending",
       createdAt: new Date().toISOString(),
@@ -55,15 +38,13 @@ function App() {
     setLeaveRequests((prev) => [newRequest, ...prev]);
   };
 
-  const updateLeaveStatus = (id, newStatus) => {
+  const updateLeaveStatus = (id, newStatus) =>
     setLeaveRequests((prev) =>
       prev.map((r) => (r.id === id ? { ...r, status: newStatus } : r))
     );
-  };
 
-  const deleteLeaveRequest = (id) => {
+  const deleteLeaveRequest = (id) =>
     setLeaveRequests((prev) => prev.filter((r) => r.id !== id));
-  };
 
   const startEditingRequest = (id) => {
     const request = leaveRequests.find((r) => r.id === id);
@@ -77,66 +58,87 @@ function App() {
     setEditingRequest(null);
   };
 
-  const homeRoute = userRole === "Manager" ? "/manager" : "/dashboard";
+  const homeRoute = user?.role === "Manager" ? "/manager" : "/dashboard";
 
   return (
     <Routes>
       <Route
         path="/"
-        element={<LoginPage onLogin={handleLogin} />}
+        element={
+          <Navigate to={isAuthenticated ? homeRoute : "/login"} replace />
+        }
       />
 
       <Route
+        path="/login"
         element={
-          <AppShellLayout
-            sidebarOpen={sidebarOpen}
-            closeSidebar={closeSidebar}
-            setSidebarOpen={setSidebarOpen}
-            userRole={userRole}
-            onLogout={handleLogout}
-          />
+          isAuthenticated
+            ? <Navigate to={homeRoute} replace />
+            : <LoginPage />
         }
-      >
-        <Route
-          path="/dashboard"
-          element={<Dashboard leaveRequests={leaveRequests} />}
-        />
+      />
 
+      <Route element={<ProtectedRoute />}>
         <Route
-          path="/manager"
           element={
-            <ManagerDashboard
-              leaveRequests={leaveRequests}
-              onUpdateStatus={updateLeaveStatus}
+            <AppShellLayout
+              sidebarOpen={sidebarOpen}
+              closeSidebar={closeSidebar}
+              setSidebarOpen={setSidebarOpen}
             />
           }
-        />
+        >
+          <Route
+            path="/dashboard"
+            element={
+              <RoleGuard allowedRoles={["Employee"]}>
+                <Dashboard leaveRequests={leaveRequests} />
+              </RoleGuard>
+            }
+          />
 
-        <Route
-          path="/apply"
-          element={
-            <ApplyLeave
-              onAddLeave={addLeaveRequest}
-              editingRequest={editingRequest}
-              onUpdateLeave={updateLeaveRequest}
-            />
-          }
-        />
+          <Route
+            path="/apply"
+            element={
+              <RoleGuard allowedRoles={["Employee"]}>
+                <ApplyLeave
+                  onAddLeave={addLeaveRequest}
+                  editingRequest={editingRequest}
+                  onUpdateLeave={updateLeaveRequest}
+                />
+              </RoleGuard>
+            }
+          />
 
-        <Route
-          path="/history"
-          element={
-            <LeaveHistory
-              leaveRequests={leaveRequests}
-              onUpdateStatus={updateLeaveStatus}
-              onDeleteRequest={deleteLeaveRequest}
-              onEditRequest={startEditingRequest}
-              userRole={userRole}
-            />
-          }
-        />
+          <Route
+            path="/manager"
+            element={
+              <RoleGuard allowedRoles={["Manager"]}>
+                <ManagerDashboard
+                  leaveRequests={leaveRequests}
+                  onUpdateStatus={updateLeaveStatus}
+                />
+              </RoleGuard>
+            }
+          />
 
-        <Route path="*" element={<Navigate to={homeRoute} replace />} />
+          <Route
+            path="/history"
+            element={
+              <RoleGuard allowedRoles={["Employee", "Manager"]}>
+                <LeaveHistory
+                  leaveRequests={leaveRequests}
+                  onUpdateStatus={updateLeaveStatus}
+                  onDeleteRequest={deleteLeaveRequest}
+                  onEditRequest={startEditingRequest}
+                  userRole={user?.role ?? "Employee"}
+                />
+              </RoleGuard>
+            }
+          />
+
+          <Route path="*" element={<Navigate to={homeRoute} replace />} />
+        </Route>
       </Route>
     </Routes>
   );

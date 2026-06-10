@@ -1,4 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom";
+import { useAuth } from "../auth/useAuth";
 import {
   DashboardIcon, ApplyIcon, HistoryIcon,
   ProfileIcon,  LogoutIcon, BriefcaseIcon, UsersIcon,
@@ -15,15 +16,15 @@ const MGR_NAV_ITEMS = [
   { to: "/history", label: "All Requests",      Icon: UsersIcon },
 ];
 
-function Navbar({ isOpen, onClose, userRole = "Employee", onLogout }) {
-  const navigate    = useNavigate();
-  const isManager   = userRole === "Manager";
-  const navItems    = isManager ? MGR_NAV_ITEMS : EMP_NAV_ITEMS;
+function Navbar({ isOpen, onClose }) {
+  const { user, logout, isManager } = useAuth();
+  const navigate = useNavigate();
+  const navItems = isManager ? MGR_NAV_ITEMS : EMP_NAV_ITEMS;
 
   const handleLogout = () => {
-    onClose();
-    onLogout?.();
-    navigate("/");
+    onClose?.();
+    logout();
+    navigate("/login", { replace: true });
   };
 
   return (
@@ -47,22 +48,25 @@ function Navbar({ isOpen, onClose, userRole = "Employee", onLogout }) {
         </div>
 
         <div className="sidebar-user">
-          <div className={`user-avatar${isManager ? " user-avatar--mgr" : ""}`} aria-hidden="true">
-            {isManager ? "MG" : "JD"}
+          <div
+            className={`user-avatar${isManager ? " user-avatar--mgr" : ""}`}
+            aria-hidden="true"
+          >
+            {user?.initials ?? "?"}
           </div>
           <div className="user-info">
-            <div className="user-name">{isManager ? "Manager" : "John Doe"}</div>
+            <div className="user-name">{user?.name ?? "Unknown"}</div>
             <span className={`user-role-badge${isManager ? " user-role-badge--mgr" : ""}`}>
-              {userRole}
+              {user?.role ?? "—"}
             </span>
           </div>
         </div>
 
         <div className={`sidebar-section-label${isManager ? " sidebar-section-label--mgr" : ""}`}>
-          {userRole}
+          {user?.role ?? "—"}
         </div>
 
-        <nav className="sidebar-nav">
+        <nav className="sidebar-nav" aria-label="Primary navigation">
           {navItems.map(({ to, label, Icon }) => (
             <NavLink
               key={to}
@@ -97,6 +101,7 @@ function Navbar({ isOpen, onClose, userRole = "Employee", onLogout }) {
             className="nav-item logout-item"
             onClick={handleLogout}
             style={{ width: "100%", background: "none", textAlign: "left" }}
+            aria-label="Sign out"
           >
             <span className="nav-icon"><LogoutIcon/></span>
             <span className="nav-label">Logout</span>

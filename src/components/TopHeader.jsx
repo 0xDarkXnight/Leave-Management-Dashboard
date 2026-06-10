@@ -1,4 +1,5 @@
 import { useLocation } from "react-router-dom";
+import { useAuth }     from "../auth/useAuth";
 import { MenuIcon, SearchIcon, BellIcon, HelpIcon, ChevronRight } from "./Icons";
 
 const BREADCRUMBS = {
@@ -8,10 +9,10 @@ const BREADCRUMBS = {
   "/history":   "Leave History",
 };
 
-function TopHeader({ onMenuToggle, userRole = "Employee" }) {
-  const { pathname } = useLocation();
-  const currentPage  = BREADCRUMBS[pathname] ?? "Page";
-  const isManager    = userRole === "Manager";
+function TopHeader({ onMenuToggle }) {
+  const { pathname }         = useLocation();
+  const { user, isManager }  = useAuth();
+  const currentPage          = BREADCRUMBS[pathname] ?? "Page";
 
   return (
     <header className="top-header">
@@ -50,19 +51,21 @@ function TopHeader({ onMenuToggle, userRole = "Employee" }) {
         <button className="hdr-icon-btn" aria-label="Help" type="button">
           <HelpIcon/>
         </button>
-
+        
         <div
           className="header-user-pill"
-          role="button"
-          tabIndex={0}
-          aria-label="User menu"
+          role="img"
+          aria-label={`Signed in as ${user?.name} (${user?.role})`}
         >
-          <div className={`hdr-avatar${isManager ? " hdr-avatar--mgr" : ""}`} aria-hidden="true">
-            {isManager ? "MG" : "JD"}
+          <div
+            className={`hdr-avatar${isManager ? " hdr-avatar--mgr" : ""}`}
+            aria-hidden="true"
+          >
+            {user?.initials ?? "?"}
           </div>
           <div className="hdr-user-info">
-            <div className="hdr-name">{isManager ? "Manager" : "John Doe"}</div>
-            <div className="hdr-role">{userRole}</div>
+            <div className="hdr-name">{user?.name ?? "—"}</div>
+            <div className="hdr-role">{user?.role ?? "—"}</div>
           </div>
         </div>
       </div>
