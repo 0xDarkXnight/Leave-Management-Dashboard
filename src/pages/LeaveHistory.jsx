@@ -1,34 +1,41 @@
 import { useMemo, useState } from "react";
 import { useNavigate }       from "react-router-dom";
-import LeaveTable            from "../components/LeaveTable";
-import ConfirmModal          from "../components/ConfirmModal";
+import LeaveTable   from "../components/LeaveTable";
+import ConfirmModal from "../components/ConfirmModal";
 
 const STATUS_OPTIONS = ["All", "Pending", "Approved", "Rejected"];
 
 function LeaveHistory({
   leaveRequests,
+  isLoading,
   onUpdateStatus,
   onDeleteRequest,
   onEditRequest,
   userRole = "Employee",
+  actionLoading,
 }) {
-  const navigate    = useNavigate();
-  const isManager   = userRole === "Manager";
+  const navigate  = useNavigate();
+  const isManager = userRole === "Manager";
 
-  const [searchTerm,   setSearch]  = useState("");
-  const [statusFilter, setStatus]  = useState("All");
-
-  const [modal, setModal] = useState({ open: false, type: null, request: null });
+  const [searchTerm,   setSearch]      = useState("");
+  const [statusFilter, setStatus]      = useState("All");
+  const [modal,        setModal]       = useState({ open: false, type: null, request: null });
+  const [isConfirming, setIsConfirming] = useState(false);
 
   const openModal  = (type, request) => setModal({ open: true, type, request });
-  const closeModal = () => setModal({ open: false, type: null, request: null });
+  const closeModal = () => { if (!isConfirming) setModal({ open: false, type: null, request: null }); };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     const { type, request } = modal;
-    if (type === "approve") onUpdateStatus(request.id, "Approved");
-    if (type === "reject")  onUpdateStatus(request.id, "Rejected");
-    if (type === "delete")  onDeleteRequest(request.id);
-    closeModal();
+    setIsConfirming(true);
+    try {
+      if (type === "approve") await onUpdateStatus(request.id, "Approved");
+      if (type === "reject")  await onUpdateStatus(request.id, "Rejected");
+      if (type === "delete")  await onDeleteRequest(request.id);
+    } finally {
+      setIsConfirming(false);
+      setModal({ open: false, type: null, request: null });
+    }
   };
 
   const handleEdit = (id) => {
@@ -36,16 +43,30 @@ function LeaveHistory({
     navigate("/apply");
   };
 
-  const filteredRequests = useMemo(() => {
-    return leaveRequests.filter((req) => {
-      const matchesName   = req.employeeName
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase());
-      const matchesStatus =
-        statusFilter === "All" || req.status === statusFilter;
+  const filteredRequests = useMemo(() =>
+    leaveRequests.filter((req) => {
+      const matchesName   = req.employeeName.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus = statusFilter === "All" || req.status === statusFilter;
       return matchesName && matchesStatus;
-    });
-  }, [leaveRequests, searchTerm, statusFilter]);
+    }),
+    [leaveRequests, searchTerm, statusFilter]
+  );
+
+  if (isLoading) {
+    return (
+      <section className="page">
+        <div className="page-header">
+          <div className="page-header-left">
+            <h1>{isManager ? "All Requests" : "Leave History"}</h1>
+            <p>Loading leave requests…</p>
+          </div>
+        </div>
+        <div className="skeleton-table" aria-hidden="true">
+          {[1, 2, 3, 4].map((i) => <div key={i} className="skeleton-row"/>)}
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="page">
@@ -70,27 +91,17 @@ function LeaveHistory({
           <label className="filter-label" htmlFor="search-name">
             {isManager ? "Search by Employee Name" : "Search Requests"}
           </label>
-          <input
-            id="search-name"
-            type="text"
+          <input id="search-name" type="text"
             placeholder={isManager ? "Type employee name…" : "Type to search…"}
             value={searchTerm}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-
         <div>
-          <label className="filter-label" htmlFor="status-filter">
-            Filter by Status
-          </label>
-          <select
-            id="status-filter"
-            value={statusFilter}
-            onChange={(e) => setStatus(e.target.value)}
-          >
-            {STATUS_OPTIONS.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
+          <label className="filter-label" htmlFor="status-filter">Filter by Status</label>
+          <select id="status-filter" value={statusFilter}
+            onChange={(e) => setStatus(e.target.value)}>
+            {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
       </div>
@@ -107,6 +118,7 @@ function LeaveHistory({
       <LeaveTable
         requests={filteredRequests}
         userRole={userRole}
+        actionLoading={actionLoading}
         onApprove={(req) => openModal("approve", req)}
         onReject={(req)  => openModal("reject",  req)}
         onDelete={(req)  => openModal("delete",  req)}
@@ -119,6 +131,7 @@ function LeaveHistory({
         request={modal.request}
         onConfirm={handleConfirm}
         onCancel={closeModal}
+        isLoading={isConfirming}
       />
     </section>
   );

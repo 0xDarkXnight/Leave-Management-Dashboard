@@ -1,6 +1,7 @@
-import { useState } from "react";
-import { useAuth }  from "../auth/useAuth";
+import { useState }    from "react";
+import { useAuth }     from "../auth/useAuth";
 import { PlusIcon, CheckIcon } from "./Icons";
+import { validateLeaveForm }   from "../utils/validators";
 
 const makeInitialState = (user) => ({
   employeeName: user?.name ?? "",
@@ -10,7 +11,7 @@ const makeInitialState = (user) => ({
   reason:       "",
 });
 
-const getFormData = (request) =>
+const extractFormData = (request) =>
   request
     ? {
         employeeName: request.employeeName,
@@ -21,14 +22,14 @@ const getFormData = (request) =>
       }
     : null;
 
-function LeaveForm({ onSubmit, editingRequest, onUpdateLeave }) {
+function LeaveForm({ onSubmit, editingRequest, onUpdateLeave, isSubmitting = false }) {
   const { user } = useAuth();
 
-  const [formData, setFormData]      = useState(
-    () => getFormData(editingRequest) ?? makeInitialState(user)
+  const [formData, setFormData] = useState(
+    () => extractFormData(editingRequest) ?? makeInitialState(user)
   );
-  const [errors,   setErrors]        = useState({});
-  const [successMessage, setSuccess] = useState("");
+  const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({});
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -36,38 +37,38 @@ function LeaveForm({ onSubmit, editingRequest, onUpdateLeave }) {
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
-  const validateForm = () => {
-    const errs = {};
-    if (!formData.employeeName.trim()) errs.employeeName = "Employee name is required.";
-    if (!formData.leaveType)           errs.leaveType    = "Please select a leave type.";
-    if (!formData.startDate)           errs.startDate    = "Start date is required.";
-    if (!formData.endDate)             errs.endDate      = "End date is required.";
-    if (
-      formData.startDate &&
-      formData.endDate &&
-      formData.endDate < formData.startDate
-    ) errs.endDate = "End date cannot be earlier than start date.";
-    if (!formData.reason.trim()) errs.reason = "Reason is required.";
-    return errs;
+  const handleBlur = (e) => {
+    const { name } = e.target;
+    setTouched((prev) => ({ ...prev, [name]: true }));
+    const allErrors = validateLeaveForm(formData, !!editingRequest);
+    setErrors((prev) => ({ ...prev, [name]: allErrors[name] ?? "" }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const validationErrors = validateForm();
+
+    setTouched({ employeeName: true, leaveType: true, startDate: true, endDate: true, reason: true });
+
+    const validationErrors = validateLeaveForm(formData, !!editingRequest);
     setErrors(validationErrors);
     if (Object.keys(validationErrors).length > 0) return;
 
+    let result;
+
     if (editingRequest) {
-      onUpdateLeave({ ...editingRequest, ...formData });
-      setSuccess("Leave request updated successfully.");
+      result = await onUpdateLeave({ ...editingRequest, ...formData });
     } else {
-      onSubmit(formData);
-      setSuccess("Leave request submitted successfully.");
+      result = await onSubmit(formData);
     }
 
-    setFormData(makeInitialState(user));
-    setTimeout(() => setSuccess(""), 4000);
+    if (result?.success !== false) {
+      setFormData(makeInitialState(user));
+      setErrors({});
+      setTouched({});
+    }
   };
+
+  const fieldError = (name) => (touched[name] || errors[name]) ? errors[name] : "";
 
   return (
     <form className="form-shell" onSubmit={handleSubmit} noValidate>
@@ -80,12 +81,6 @@ function LeaveForm({ onSubmit, editingRequest, onUpdateLeave }) {
       </div>
 
       <div className="form-shell-body">
-        {successMessage && (
-          <div className="success-banner">
-            <CheckIcon /> {successMessage}
-          </div>
-        )}
-
         <div className="form-grid">
           <div className="form-group">
             <label htmlFor="employeeName">Employee Name</label>
@@ -95,14 +90,16 @@ function LeaveForm({ onSubmit, editingRequest, onUpdateLeave }) {
               name="employeeName"
               value={formData.employeeName}
               onChange={handleChange}
+              onBlur={handleBlur}
               placeholder="Your full name"
               readOnly={!!user?.name}
               style={user?.name ? { background: "var(--clr-bg)", cursor: "default" } : {}}
-              aria-describedby={errors.employeeName ? "err-empName" : undefined}
+              aria-invalid={!!fieldError("employeeName")}
+              aria-describedby={fieldError("employeeName") ? "err-empName" : undefined}
             />
-            {errors.employeeName && (
-              <span id="err-empName" className="error-text">
-                ⚠ {errors.employeeName}
+            {fieldError("employeeName") && (
+              <span id="err-empName" className="error-text" role="alert">
+                ⚠ {fieldError("employeeName")}
               </span>
             )}
           </div>
@@ -114,16 +111,18 @@ function LeaveForm({ onSubmit, editingRequest, onUpdateLeave }) {
               name="leaveType"
               value={formData.leaveType}
               onChange={handleChange}
-              aria-describedby={errors.leaveType ? "err-leaveType" : undefined}
+              onBlur={handleBlur}
+              aria-invalid={!!fieldError("leaveType")}
+              aria-describedby={fieldError("leaveType") ? "err-leaveType" : undefined}
             >
               <option value="">Select leave type</option>
               <option value="Sick Leave">Sick Leave</option>
               <option value="Casual Leave">Casual Leave</option>
               <option value="Annual Leave">Annual Leave</option>
             </select>
-            {errors.leaveType && (
-              <span id="err-leaveType" className="error-text">
-                ⚠ {errors.leaveType}
+            {fieldError("leaveType") && (
+              <span id="err-leaveType" className="error-text" role="alert">
+                ⚠ {fieldError("leaveType")}
               </span>
             )}
           </div>
@@ -136,11 +135,13 @@ function LeaveForm({ onSubmit, editingRequest, onUpdateLeave }) {
               name="startDate"
               value={formData.startDate}
               onChange={handleChange}
-              aria-describedby={errors.startDate ? "err-start" : undefined}
+              onBlur={handleBlur}
+              aria-invalid={!!fieldError("startDate")}
+              aria-describedby={fieldError("startDate") ? "err-start" : undefined}
             />
-            {errors.startDate && (
-              <span id="err-start" className="error-text">
-                ⚠ {errors.startDate}
+            {fieldError("startDate") && (
+              <span id="err-start" className="error-text" role="alert">
+                ⚠ {fieldError("startDate")}
               </span>
             )}
           </div>
@@ -153,36 +154,55 @@ function LeaveForm({ onSubmit, editingRequest, onUpdateLeave }) {
               name="endDate"
               value={formData.endDate}
               onChange={handleChange}
-              aria-describedby={errors.endDate ? "err-end" : undefined}
+              onBlur={handleBlur}
+              aria-invalid={!!fieldError("endDate")}
+              aria-describedby={fieldError("endDate") ? "err-end" : undefined}
             />
-            {errors.endDate && (
-              <span id="err-end" className="error-text">
-                ⚠ {errors.endDate}
+            {fieldError("endDate") && (
+              <span id="err-end" className="error-text" role="alert">
+                ⚠ {fieldError("endDate")}
               </span>
             )}
           </div>
 
           <div className="form-group full-width">
-            <label htmlFor="reason">Reason for Leave</label>
+            <label htmlFor="reason">
+              Reason for Leave
+              <span className="field-hint">Min. 10 characters</span>
+            </label>
             <textarea
               id="reason"
               name="reason"
               value={formData.reason}
               onChange={handleChange}
+              onBlur={handleBlur}
               placeholder="Please describe the reason for your leave request…"
-              aria-describedby={errors.reason ? "err-reason" : undefined}
+              aria-invalid={!!fieldError("reason")}
+              aria-describedby={fieldError("reason") ? "err-reason" : "reason-hint"}
             />
-            {errors.reason && (
-              <span id="err-reason" className="error-text">
-                ⚠ {errors.reason}
+            <div id="reason-hint" className="field-char-count" aria-live="polite">
+              {formData.reason.trim().length} / 10 minimum characters
+            </div>
+            {fieldError("reason") && (
+              <span id="err-reason" className="error-text" role="alert">
+                ⚠ {fieldError("reason")}
               </span>
             )}
           </div>
         </div>
 
         <div className="form-actions">
-          <button type="submit" className="btn-primary">
-            {editingRequest ? (
+          <button
+            type="submit"
+            className="btn-primary"
+            disabled={isSubmitting}
+            aria-busy={isSubmitting}
+          >
+            {isSubmitting ? (
+              <><span className="btn-spinner" aria-hidden="true"/>
+                {editingRequest ? "Updating…" : "Submitting…"}
+              </>
+            ) : editingRequest ? (
               <><CheckIcon /> Update Request</>
             ) : (
               <><PlusIcon /> Submit Leave Request</>
@@ -193,9 +213,12 @@ function LeaveForm({ onSubmit, editingRequest, onUpdateLeave }) {
             <button
               type="button"
               className="btn-secondary"
-              onClick={() => {
+              disabled={isSubmitting}
+              onClick={async () => {
                 setFormData(makeInitialState(user));
-                onUpdateLeave({ ...editingRequest, cancel: true });
+                setErrors({});
+                setTouched({});
+                await onUpdateLeave({ ...editingRequest, cancel: true });
               }}
             >
               Cancel Edit

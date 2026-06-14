@@ -21,37 +21,27 @@ function Navbar({ isOpen, onClose }) {
   const navigate = useNavigate();
   const navItems = isManager ? MGR_NAV_ITEMS : EMP_NAV_ITEMS;
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     onClose?.();
-    logout();
+    await logout();
     navigate("/login", { replace: true });
   };
 
   return (
     <>
-      <div
-        className={`sidebar-overlay${isOpen ? " visible" : ""}`}
-        onClick={onClose}
-        aria-hidden="true"
-      />
+      <div className={`sidebar-overlay${isOpen ? " visible" : ""}`}
+        onClick={onClose} aria-hidden="true"/>
 
-      <aside
-        className={`sidebar${isOpen ? " open" : ""}${isManager ? " sidebar--manager" : ""}`}
-        aria-label="Sidebar navigation"
-      >
+      <aside className={`sidebar${isOpen ? " open" : ""}${isManager ? " sidebar--manager" : ""}`}
+        aria-label="Sidebar navigation">
+
         <div className="sidebar-brand">
           <div className="brand-icon" aria-hidden="true">LM</div>
-          <div className="brand-text">
-            <h2>LMS</h2>
-            <span>Leave Management</span>
-          </div>
+          <div className="brand-text"><h2>LMS</h2><span>Leave Management</span></div>
         </div>
 
         <div className="sidebar-user">
-          <div
-            className={`user-avatar${isManager ? " user-avatar--mgr" : ""}`}
-            aria-hidden="true"
-          >
+          <div className={`user-avatar${isManager ? " user-avatar--mgr" : ""}`} aria-hidden="true">
             {user?.initials ?? "?"}
           </div>
           <div className="user-info">
@@ -68,14 +58,8 @@ function Navbar({ isOpen, onClose }) {
 
         <nav className="sidebar-nav" aria-label="Primary navigation">
           {navItems.map(({ to, label, Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              onClick={onClose}
-              className={({ isActive }) =>
-                `nav-item${isActive ? " active" : ""}`
-              }
-            >
+            <NavLink key={to} to={to} onClick={onClose}
+              className={({ isActive }) => `nav-item${isActive ? " active" : ""}`}>
               <span className="nav-icon"><Icon/></span>
               <span className="nav-label">{label}</span>
             </NavLink>
@@ -84,25 +68,15 @@ function Navbar({ isOpen, onClose }) {
 
         <div className="sidebar-footer">
           {!isManager && (
-            <NavLink
-              to="/profile"
-              onClick={onClose}
-              className={({ isActive }) =>
-                `nav-item${isActive ? " active" : ""}`
-              }
-            >
+            <NavLink to="/profile" onClick={onClose}
+              className={({ isActive }) => `nav-item${isActive ? " active" : ""}`}>
               <span className="nav-icon"><ProfileIcon/></span>
               <span className="nav-label">My Profile</span>
             </NavLink>
           )}
-
-          <button
-            type="button"
-            className="nav-item logout-item"
-            onClick={handleLogout}
+          <button type="button" className="nav-item logout-item" onClick={handleLogout}
             style={{ width: "100%", background: "none", textAlign: "left" }}
-            aria-label="Sign out"
-          >
+            aria-label="Sign out">
             <span className="nav-icon"><LogoutIcon/></span>
             <span className="nav-label">Logout</span>
           </button>

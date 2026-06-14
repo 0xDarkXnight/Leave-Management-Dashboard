@@ -5,23 +5,39 @@ import StatusBadge from "../components/StatusBadge";
 import { PlusIcon } from "../components/Icons";
 
 const fmtDate = (d) =>
-  d
-    ? new Date(d).toLocaleDateString("en-GB", {
-        day: "2-digit", month: "short", year: "numeric",
-      })
-    : "—";
+  d ? new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—";
 
-function Dashboard({ leaveRequests }) {
-  const navigate    = useNavigate();
-  const { user }    = useAuth();
-  const firstName   = user?.name?.split(" ")[0] ?? "there";
+function Dashboard({ leaveRequests, isLoading }) {
+  const navigate  = useNavigate();
+  const { user }  = useAuth();
+  const firstName = user?.name?.split(" ")[0] ?? "there";
 
   const total    = leaveRequests.length;
   const pending  = leaveRequests.filter((r) => r.status === "Pending").length;
   const approved = leaveRequests.filter((r) => r.status === "Approved").length;
   const rejected = leaveRequests.filter((r) => r.status === "Rejected").length;
+  const recent   = leaveRequests.slice(0, 5);
 
-  const recent = leaveRequests.slice(0, 5);
+  if (isLoading) {
+    return (
+      <section className="page">
+        <div className="page-header">
+          <div className="page-header-left">
+            <h1>Employee Dashboard</h1>
+            <p>Loading your leave data…</p>
+          </div>
+        </div>
+        <div className="cards-grid">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="summary-card skeleton-card" aria-hidden="true"/>
+          ))}
+        </div>
+        <div className="skeleton-table" aria-hidden="true">
+          {[1, 2, 3].map((i) => <div key={i} className="skeleton-row"/>)}
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="page">
@@ -49,13 +65,13 @@ function Dashboard({ leaveRequests }) {
       <div className="cards-grid">
         <SummaryCard title="Total Requests" value={total}
           subtitle={`${total} total submission${total !== 1 ? "s" : ""}`}
-          icon="📋" variant="total" />
-        <SummaryCard title="Pending"   value={pending}
-          subtitle="Awaiting manager action" icon="⏳" variant="pending" />
-        <SummaryCard title="Approved"  value={approved}
-          subtitle="Approved in your history" icon="✅" variant="approved" />
-        <SummaryCard title="Rejected"  value={rejected}
-          subtitle="Declined requests" icon="❌" variant="rejected" />
+          icon="📋" variant="total"/>
+        <SummaryCard title="Pending"  value={pending}
+          subtitle="Awaiting manager action" icon="⏳" variant="pending"/>
+        <SummaryCard title="Approved" value={approved}
+          subtitle="Approved in your history" icon="✅" variant="approved"/>
+        <SummaryCard title="Rejected" value={rejected}
+          subtitle="Declined requests" icon="❌" variant="rejected"/>
       </div>
 
       <div className="info-banner">
@@ -77,20 +93,14 @@ function Dashboard({ leaveRequests }) {
         <div className="table-card">
           <div className="table-card-header">
             <h3>Recent Submissions</h3>
-            <span className="table-count-badge">
-              Last {recent.length} of {total}
-            </span>
+            <span className="table-count-badge">Last {recent.length} of {total}</span>
           </div>
-
           <div className="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>Employee</th>
-                  <th>Leave Type</th>
-                  <th>Start Date</th>
-                  <th>End Date</th>
-                  <th>Status</th>
+                  <th>Employee</th><th>Leave Type</th>
+                  <th>Start Date</th><th>End Date</th><th>Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -104,9 +114,7 @@ function Dashboard({ leaveRequests }) {
                         <span className="emp-name">{req.employeeName}</span>
                       </div>
                     </td>
-                    <td>
-                      <span className="leave-type-chip">{req.leaveType}</span>
-                    </td>
+                    <td><span className="leave-type-chip">{req.leaveType}</span></td>
                     <td>{fmtDate(req.startDate)}</td>
                     <td>{fmtDate(req.endDate)}</td>
                     <td><StatusBadge status={req.status}/></td>
@@ -115,32 +123,20 @@ function Dashboard({ leaveRequests }) {
               </tbody>
             </table>
           </div>
-
           <div className="mobile-cards">
             {recent.map((req) => (
               <div key={req.id} className="mobile-card">
                 <div className="mc-header">
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <div className="emp-avatar">
-                      {req.employeeName?.charAt(0)?.toUpperCase() ?? "?"}
-                    </div>
+                    <div className="emp-avatar">{req.employeeName?.charAt(0)?.toUpperCase() ?? "?"}</div>
                     <span className="mc-name">{req.employeeName}</span>
                   </div>
                   <StatusBadge status={req.status}/>
                 </div>
                 <div className="mc-meta">
-                  <div className="mc-meta-item">
-                    <label>Leave Type</label>
-                    <span>{req.leaveType}</span>
-                  </div>
-                  <div className="mc-meta-item">
-                    <label>Start Date</label>
-                    <span>{fmtDate(req.startDate)}</span>
-                  </div>
-                  <div className="mc-meta-item">
-                    <label>End Date</label>
-                    <span>{fmtDate(req.endDate)}</span>
-                  </div>
+                  <div className="mc-meta-item"><label>Leave Type</label><span>{req.leaveType}</span></div>
+                  <div className="mc-meta-item"><label>Start Date</label><span>{fmtDate(req.startDate)}</span></div>
+                  <div className="mc-meta-item"><label>End Date</label><span>{fmtDate(req.endDate)}</span></div>
                 </div>
               </div>
             ))}
