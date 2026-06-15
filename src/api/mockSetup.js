@@ -38,7 +38,13 @@ mock.onPost("/auth/login").reply((config) => {
     ];
   }
 
-  const { password: _pw, ...publicUser } = found;
+  const publicUser = {
+    id:       found.id,
+    name:     found.name,
+    email:    found.email,
+    role:     found.role,
+    initials: found.initials,
+  };
   return [200, { user: publicUser, message: "Login successful." }];
 });
 

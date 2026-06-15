@@ -1,7 +1,6 @@
-import { createContext, useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef } from "react";
+import { ToastContext } from "./toastContext";
 import Toast from "../components/Toast";
-
-export const ToastContext = createContext(null);
 
 export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);
@@ -27,7 +26,6 @@ export function ToastProvider({ children }) {
   return (
     <ToastContext.Provider value={toast}>
       {children}
-
       <div
         className="toast-container"
         aria-live="polite"
