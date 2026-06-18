@@ -1,21 +1,26 @@
-import React from "react";
-import ReactDOM from "react-dom/client";
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
-import "./api/mockSetup";
-
-import { AuthProvider }  from "./auth/AuthContext";
-import { ToastProvider } from "./context/ToastContext";
-import App               from "./App";
 import "./index.css";
 
-ReactDOM.createRoot(document.getElementById("root")).render(
-  <React.StrictMode>
+import { ToastProvider } from "./context/ToastContext.jsx";
+import { AuthProvider }  from "./auth/AuthContext.jsx";
+import { ChatProvider }  from "./chat/ChatContext.jsx";
+import App from "./App";
+
+// Initialise mock API layer before anything renders
+import "./api/mockSetup";
+
+createRoot(document.getElementById("root")).render(
+  <StrictMode>
     <BrowserRouter>
       <ToastProvider>
         <AuthProvider>
-          <App />
+          <ChatProvider>
+            <App />
+          </ChatProvider>
         </AuthProvider>
       </ToastProvider>
     </BrowserRouter>
-  </React.StrictMode>
+  </StrictMode>
 );

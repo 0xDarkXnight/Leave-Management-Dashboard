@@ -1,14 +1,15 @@
 import { useState } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 
-import { useAuth }           from "./auth/useAuth";
-import { useLeaveRequests }  from "./hooks/useLeaveRequests";
+import { useAuth }          from "./auth/useAuth";
+import { useLeaveRequests } from "./hooks/useLeaveRequests";
 
 import Dashboard        from "./pages/Dashboard";
 import ApplyLeave       from "./pages/ApplyLeave";
 import LeaveHistory     from "./pages/LeaveHistory";
 import LoginPage        from "./pages/LoginPage";
 import ManagerDashboard from "./pages/ManagerDashboard";
+import ChatPage         from "./pages/ChatPage";
 import AppShellLayout   from "./layouts/AppShellLayout";
 import ProtectedRoute   from "./components/ProtectedRoute";
 import RoleGuard        from "./components/RoleGuard";
@@ -41,9 +42,7 @@ function App() {
       return { success: true };
     }
     const result = await updateLeaveRequest(updatedRequest);
-    if (result?.success) {
-      setEditingRequest(null);
-    }
+    if (result?.success) setEditingRequest(null);
     return result;
   };
 
@@ -131,6 +130,15 @@ function App() {
                   userRole={user?.role ?? "Employee"}
                   actionLoading={actionLoading}
                 />
+              </RoleGuard>
+            }
+          />
+
+          <Route
+            path="/chat"
+            element={
+              <RoleGuard allowedRoles={["Employee", "Manager"]}>
+                <ChatPage />
               </RoleGuard>
             }
           />

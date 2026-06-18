@@ -1,25 +1,29 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/useAuth";
+import { useChat } from "../chat/useChat";
 import {
   DashboardIcon, ApplyIcon, HistoryIcon,
-  ProfileIcon,  LogoutIcon, BriefcaseIcon, UsersIcon,
+  ProfileIcon, LogoutIcon, BriefcaseIcon, UsersIcon, ChatIcon,
 } from "./Icons";
 
 const EMP_NAV_ITEMS = [
   { to: "/dashboard", label: "Dashboard",    Icon: DashboardIcon },
   { to: "/apply",     label: "Apply Leave",  Icon: ApplyIcon },
   { to: "/history",   label: "Leave History",Icon: HistoryIcon },
+  { to: "/chat",      label: "Messages",     Icon: ChatIcon, showBadge: true },
 ];
 
 const MGR_NAV_ITEMS = [
-  { to: "/manager", label: "Manager Dashboard", Icon: BriefcaseIcon },
-  { to: "/history", label: "All Requests",      Icon: UsersIcon },
+  { to: "/manager",   label: "Manager Dashboard", Icon: BriefcaseIcon },
+  { to: "/history",   label: "All Requests",      Icon: UsersIcon },
+  { to: "/chat",      label: "Messages",          Icon: ChatIcon, showBadge: true },
 ];
 
 function Navbar({ isOpen, onClose }) {
   const { user, logout, isManager } = useAuth();
-  const navigate = useNavigate();
-  const navItems = isManager ? MGR_NAV_ITEMS : EMP_NAV_ITEMS;
+  const { totalUnread }             = useChat();
+  const navigate                    = useNavigate();
+  const navItems                    = isManager ? MGR_NAV_ITEMS : EMP_NAV_ITEMS;
 
   const handleLogout = async () => {
     onClose?.();
@@ -57,11 +61,16 @@ function Navbar({ isOpen, onClose }) {
         </div>
 
         <nav className="sidebar-nav" aria-label="Primary navigation">
-          {navItems.map(({ to, label, Icon }) => (
+          {navItems.map(({ to, label, Icon, showBadge }) => (
             <NavLink key={to} to={to} onClick={onClose}
               className={({ isActive }) => `nav-item${isActive ? " active" : ""}`}>
               <span className="nav-icon"><Icon/></span>
               <span className="nav-label">{label}</span>
+              {showBadge && totalUnread > 0 && (
+                <span className="nav-unread-badge" aria-label={`${totalUnread} unread messages`}>
+                  {totalUnread > 9 ? "9+" : totalUnread}
+                </span>
+              )}
             </NavLink>
           ))}
         </nav>
