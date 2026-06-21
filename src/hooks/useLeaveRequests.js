@@ -1,9 +1,11 @@
 import { useState, useCallback, useEffect } from "react";
 import { leaveService } from "../services/leaveService";
 import { useToast } from "./useToast";
+import { useNotifications } from "../notifications/useNotifications";
 
 export function useLeaveRequests() {
   const toast = useToast();
+  const { refreshNotifications, refreshActivity } = useNotifications();
 
   const [leaveRequests, setLeaveRequests] = useState([]);
   const [isLoading,     setIsLoading]     = useState(true);
@@ -34,6 +36,8 @@ export function useLeaveRequests() {
       const created = await leaveService.create(requestData);
       setLeaveRequests((prev) => [created, ...prev]);
       toast.success("Leave request submitted successfully!");
+      refreshNotifications();
+      refreshActivity();
       return { success: true };
     } catch (err) {
       toast.error(err.message ?? "Failed to submit leave request.");
@@ -41,7 +45,7 @@ export function useLeaveRequests() {
     } finally {
       setActionLoading(null);
     }
-  }, [toast]);
+  }, [toast, refreshNotifications, refreshActivity]);
 
   const updateLeaveStatus = useCallback(async (id, status) => {
     setActionLoading(`status-${id}`);
@@ -52,6 +56,8 @@ export function useLeaveRequests() {
       );
       const label = status === "Approved" ? "approved" : "rejected";
       toast.success(`Leave request ${label} successfully.`);
+      refreshNotifications();
+      refreshActivity();
       return { success: true };
     } catch (err) {
       toast.error(err.message ?? `Failed to ${status.toLowerCase()} leave request.`);
@@ -59,7 +65,7 @@ export function useLeaveRequests() {
     } finally {
       setActionLoading(null);
     }
-  }, [toast]);
+  }, [toast, refreshNotifications, refreshActivity]);
 
   const deleteLeaveRequest = useCallback(async (id) => {
     setActionLoading(`delete-${id}`);
@@ -67,6 +73,7 @@ export function useLeaveRequests() {
       await leaveService.delete(id);
       setLeaveRequests((prev) => prev.filter((r) => r.id !== id));
       toast.success("Leave request deleted successfully.");
+      refreshActivity();
       return { success: true };
     } catch (err) {
       toast.error(err.message ?? "Failed to delete leave request.");
@@ -74,7 +81,7 @@ export function useLeaveRequests() {
     } finally {
       setActionLoading(null);
     }
-  }, [toast]);
+  }, [toast, refreshActivity]);
 
   const updateLeaveRequest = useCallback(async (updatedData) => {
     const { id, ...rest } = updatedData;
@@ -85,6 +92,8 @@ export function useLeaveRequests() {
         prev.map((r) => (r.id === id ? updated : r))
       );
       toast.success("Leave request updated successfully.");
+      refreshNotifications();
+      refreshActivity();
       return { success: true };
     } catch (err) {
       toast.error(err.message ?? "Failed to update leave request.");
@@ -92,7 +101,7 @@ export function useLeaveRequests() {
     } finally {
       setActionLoading(null);
     }
-  }, [toast]);
+  }, [toast, refreshNotifications, refreshActivity]);
 
   return {
     leaveRequests,

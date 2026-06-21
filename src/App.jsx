@@ -10,6 +10,8 @@ import LeaveHistory     from "./pages/LeaveHistory";
 import LoginPage        from "./pages/LoginPage";
 import ManagerDashboard from "./pages/ManagerDashboard";
 import ChatPage         from "./pages/ChatPage";
+import NotificationsPage from "./pages/NotificationsPage";
+import ActivityPage      from "./pages/ActivityPage";
 import AppShellLayout   from "./layouts/AppShellLayout";
 import ProtectedRoute   from "./components/ProtectedRoute";
 import RoleGuard        from "./components/RoleGuard";
@@ -139,6 +141,24 @@ function App() {
             element={
               <RoleGuard allowedRoles={["Employee", "Manager"]}>
                 <ChatPage />
+              </RoleGuard>
+            }
+          />
+
+          <Route
+            path="/notifications"
+            element={
+              <RoleGuard allowedRoles={["Employee", "Manager"]}>
+                <NotificationsPage />
+              </RoleGuard>
+            }
+          />
+
+          <Route
+            path="/activity"
+            element={
+              <RoleGuard allowedRoles={["Employee", "Manager"]}>
+                <ActivityPage />
               </RoleGuard>
             }
           />

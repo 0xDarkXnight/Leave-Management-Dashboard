@@ -87,3 +87,87 @@ export const markMessagesAsRead = (userId, messageIds) => {
   });
   saveAllChatMessages(updated);
 };
+
+const NOTIFICATIONS_KEY = "lms_notifications";
+
+export const loadAllNotifications = () => {
+  try {
+    const raw = localStorage.getItem(NOTIFICATIONS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+};
+
+export const saveAllNotifications = (notifications) => {
+  try {
+    localStorage.setItem(NOTIFICATIONS_KEY, JSON.stringify(notifications));
+  } catch {
+    console.error("[LMS] Could not save notifications.");
+  }
+};
+
+export const loadNotificationsForUser = (userId) =>
+  loadAllNotifications()
+    .filter((n) => n.userId === userId)
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+export const appendNotification = (notification) => {
+  const all = loadAllNotifications();
+  saveAllNotifications([notification, ...all]);
+};
+
+export const markNotificationRead = (notificationId) => {
+  const all     = loadAllNotifications();
+  const updated = all.map((n) =>
+    n.id === notificationId ? { ...n, isRead: true } : n
+  );
+  saveAllNotifications(updated);
+};
+
+export const markAllNotificationsRead = (userId) => {
+  const all     = loadAllNotifications();
+  const updated = all.map((n) =>
+    n.userId === userId ? { ...n, isRead: true } : n
+  );
+  saveAllNotifications(updated);
+};
+
+export const removeNotification = (notificationId) => {
+  const all = loadAllNotifications();
+  saveAllNotifications(all.filter((n) => n.id !== notificationId));
+};
+
+const ACTIVITY_KEY = "lms_activity";
+const MAX_ACTIVITY = 150;
+
+export const loadAllActivity = () => {
+  try {
+    const raw = localStorage.getItem(ACTIVITY_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+};
+
+export const saveAllActivity = (activities) => {
+  try {
+    localStorage.setItem(ACTIVITY_KEY, JSON.stringify(activities));
+  } catch {
+    console.error("[LMS] Could not save activity log.");
+  }
+};
+
+export const loadActivityForUser = (userId, role) => {
+  const all = loadAllActivity().sort(
+    (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
+  );
+  if (role === "Manager") return all;
+  return all.filter((a) => a.userId === userId || a.targetUserId === userId);
+};
+
+export const appendActivity = (activity) => {
+  const all = loadAllActivity();
+  const capped = [activity, ...all].slice(0, MAX_ACTIVITY);
+  saveAllActivity(capped);
+};

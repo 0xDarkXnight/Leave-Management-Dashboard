@@ -1,20 +1,21 @@
 import { useLocation } from "react-router-dom";
 import { useAuth }     from "../auth/useAuth";
-import { useChat }     from "../chat/useChat";
-import { MenuIcon, SearchIcon, BellIcon, HelpIcon, ChevronRight } from "./Icons";
+import { MenuIcon, SearchIcon, HelpIcon, ChevronRight } from "./Icons";
+import NotificationBell from "./notifications/NotificationBell";
 
 const BREADCRUMBS = {
-  "/dashboard": "Dashboard",
-  "/manager":   "Manager Dashboard",
-  "/apply":     "Apply Leave",
-  "/history":   "Leave History",
-  "/chat":      "Messages",
+  "/dashboard":     "Dashboard",
+  "/manager":       "Manager Dashboard",
+  "/apply":         "Apply Leave",
+  "/history":       "Leave History",
+  "/chat":          "Messages",
+  "/notifications": "Notifications",
+  "/activity":      "Activity",
 };
 
 function TopHeader({ onMenuToggle }) {
   const { pathname }        = useLocation();
   const { user, isManager } = useAuth();
-  const { totalUnread }     = useChat();
   const currentPage         = BREADCRUMBS[pathname] ?? "Page";
 
   return (
@@ -46,14 +47,7 @@ function TopHeader({ onMenuToggle }) {
       </div>
 
       <div className="header-right">
-        <button className="hdr-icon-btn" aria-label={`Notifications${totalUnread > 0 ? `, ${totalUnread} unread messages` : ""}`} type="button">
-          <BellIcon/>
-          {totalUnread > 0 && (
-            <span className="notif-badge" aria-hidden="true">
-              {totalUnread > 9 ? "9+" : totalUnread}
-            </span>
-          )}
-        </button>
+        <NotificationBell />
 
         <button className="hdr-icon-btn" aria-label="Help" type="button">
           <HelpIcon/>

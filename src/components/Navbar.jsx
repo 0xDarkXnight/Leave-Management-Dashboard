@@ -3,7 +3,7 @@ import { useAuth } from "../auth/useAuth";
 import { useChat } from "../chat/useChat";
 import {
   DashboardIcon, ApplyIcon, HistoryIcon,
-  ProfileIcon, LogoutIcon, BriefcaseIcon, UsersIcon, ChatIcon,
+  ProfileIcon, LogoutIcon, BriefcaseIcon, UsersIcon, ChatIcon, ActivityIcon,
 } from "./Icons";
 
 const EMP_NAV_ITEMS = [
@@ -11,12 +11,14 @@ const EMP_NAV_ITEMS = [
   { to: "/apply",     label: "Apply Leave",  Icon: ApplyIcon },
   { to: "/history",   label: "Leave History",Icon: HistoryIcon },
   { to: "/chat",      label: "Messages",     Icon: ChatIcon, showBadge: true },
+  { to: "/activity",  label: "Activity",     Icon: ActivityIcon },
 ];
 
 const MGR_NAV_ITEMS = [
   { to: "/manager",   label: "Manager Dashboard", Icon: BriefcaseIcon },
   { to: "/history",   label: "All Requests",      Icon: UsersIcon },
   { to: "/chat",      label: "Messages",          Icon: ChatIcon, showBadge: true },
+  { to: "/activity",  label: "Activity",          Icon: ActivityIcon },
 ];
 
 function Navbar({ isOpen, onClose }) {

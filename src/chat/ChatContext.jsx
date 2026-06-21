@@ -3,9 +3,11 @@ import { ChatContext }   from "./chatContext";
 import { socketService } from "./socketService";
 import { chatService }   from "../services/chatService";
 import { useAuth }       from "../auth/useAuth";
+import { useNotifications } from "../notifications/useNotifications";
 
 export function ChatProvider({ children }) {
   const { user, isAuthenticated } = useAuth();
+  const { refreshActivity }       = useNotifications();
   const [conversations,        setConversations]        = useState([]);
   const [activeConversationId, setActiveConversationId] = useState(null);
   const [messages,             setMessages]             = useState({});
@@ -268,6 +270,7 @@ export function ChatProvider({ children }) {
       );
 
       socketService.broadcast("new_message", real);
+      refreshActivity();
 
       return true;
     } catch (err) {
@@ -282,7 +285,7 @@ export function ChatProvider({ children }) {
     } finally {
       setIsSending(false);
     }
-  }, [activeConversationId, user]);
+  }, [activeConversationId, user, refreshActivity]);
 
   const sendTypingStart = useCallback(() => {
     if (!activeConversationId || !user) return;
