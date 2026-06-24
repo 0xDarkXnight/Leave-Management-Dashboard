@@ -1,0 +1,398 @@
+# ══════════════════════════════════════════════════════════════════════════════
+#  GitHub Actions — CI Pipeline
+#  Project : Leave Management Dashboard  (React 19 + Vite 8)
+#  File    : .github/workflows/main.yml
+#
+#  Pipeline summary
+#  ────────────────
+#  Push / PR  ──►  frontend job
+#                    ├─ Checkout
+#                    ├─ Setup Node 20 + restore npm cache
+#                    ├─ npm ci        (clean, reproducible install)
+#                    ├─ npm ls        (verify dependency tree)
+#                    ├─ npm run lint  (ESLint 10 flat-config)
+#                    ├─ npm run build (Vite production bundle → /dist)
+#                    └─ Upload dist/  (artifact, 7-day retention)
+#
+#  Future job slots are stubbed out at the bottom of this file:
+#    • test        — Vitest unit / integration tests
+#    • backend     — Node/Express lint + test (when /server is added)
+#    • docker      — Multi-stage Docker build + push to GHCR
+#    • deploy      — Vercel preview / production deployment
+# ══════════════════════════════════════════════════════════════════════════════
+
+name: "CI — Leave Management Dashboard"
+
+# ─── Triggers ──────────────────────────────────────────────────────────────────
+#
+#  push  →  branches: ['**']
+#    Runs on every commit to every branch — feature branches, hotfixes, etc.
+#    Gives developers instant feedback without waiting for a PR to be opened.
+#    The '**' glob is equivalent to "all branches".
+#
+#  pull_request  →  branches: [main]
+#    Acts as the merge gate for the main branch.
+#    GitHub will block the merge button until this workflow turns green,
+#    provided you enable the "Require status checks to pass" branch-protection
+#    rule for the `frontend` job in your repository settings.
+# ──────────────────────────────────────────────────────────────────────────────
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+    branches:
+      - main
+
+# ─── Repository-wide permissions ──────────────────────────────────────────────
+#
+#  Principle of least privilege: grant only what the workflow actually needs.
+#  A pure build-and-lint job only needs to READ the repository source.
+#  No write access is requested here; individual jobs may override this
+#  with their own `permissions:` block when they need more (e.g., docker push).
+# ──────────────────────────────────────────────────────────────────────────────
+permissions:
+  contents: read
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  JOB 1 — Frontend: Checkout → Install → Lint → Build → Upload artifact
+# ══════════════════════════════════════════════════════════════════════════════
+jobs:
+  frontend:
+    name: "Frontend — Lint & Build"
+
+    # ubuntu-latest is the recommended default runner:
+    #   • Always up-to-date with the latest Ubuntu LTS
+    #   • Pre-installed with Node.js, npm, git, and all build essentials
+    #   • 2 vCPUs / 7 GB RAM — more than enough for a Vite frontend build
+    runs-on: ubuntu-latest
+
+    # ── Build-time environment variables ─────────────────────────────────────
+    #
+    #  Context: Vite bakes VITE_* variables into the JavaScript bundle
+    #  AT BUILD TIME — they cannot be changed at runtime (unlike backend envs).
+    #  This means CI must supply them before `npm run build` is executed.
+    #
+    #  The values below are CI-safe defaults, mirroring .env.example:
+    #    • VITE_ENABLE_MOCK_API=true  → axios-mock-adapter intercepts all
+    #      HTTP calls; no real backend is needed during CI.
+    #    • VITE_APP_VERSION is tagged with "-ci" so build artifacts can be
+    #      clearly identified as CI outputs vs. a release build.
+    #
+    #  For staging / production deployments (added in a future `deploy` job),
+    #  replace these inline values with GitHub Secrets:
+    #    VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+    # ─────────────────────────────────────────────────────────────────────────
+    env:
+      VITE_APP_NAME:        "Leave Management System"
+      VITE_APP_VERSION:     "0.0.0-ci"
+      VITE_API_BASE_URL:    "http://localhost:3000/api"
+      VITE_REQUEST_TIMEOUT: "8000"
+      VITE_ENABLE_MOCK_API: "true"
+
+    steps:
+
+      # ── Step 1: Checkout repository ─────────────────────────────────────────
+      #
+      #  Downloads the repository contents (HEAD commit of the triggering
+      #  branch or PR) onto the runner's filesystem.
+      #
+      #  `actions/checkout@v4` is the official GitHub action.
+      #  Pinning to a major version (v4) means:
+      #    • Patch and minor updates are received automatically
+      #    • Major breaking changes require a deliberate bump here
+      #
+      #  By default this performs a shallow clone (depth=1), which is faster
+      #  than a full clone and sufficient for a build/lint job.
+      # ────────────────────────────────────────────────────────────────────────
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v4
+
+      # ── Step 2: Set up Node.js 20 with npm cache ────────────────────────────
+      #
+      #  Why Node 20?
+      #  Our Dockerfile's builder stage uses `node:20-alpine`, so using the
+      #  same major version in CI guarantees identical JavaScript behaviour
+      #  and avoids "works in Docker, breaks in CI" surprises.
+      #  Node 20 is the current LTS (Long-Term Support) release, receiving
+      #  security patches until April 2026.
+      #
+      #  Why `cache: 'npm'`?
+      #  The setup-node action detects the package manager from `cache: 'npm'`
+      #  and automatically:
+      #    1. Computes a cache key:  runner.os + hash(package-lock.json)
+      #    2. Restores ~/.npm (the global npm cache) if the key matches
+      #    3. Saves ~/.npm after a cache miss so subsequent runs benefit
+      #
+      #  Effect on build time:
+      #    Cold run  (no cache / lock file changed) : ~45–60 s  for npm ci
+      #    Warm run  (cache hit / lock file unchanged) :  ~8–12 s  for npm ci
+      #
+      #  IMPORTANT: The cache key is derived from package-lock.json (lockfileVersion 3
+      #  in this project). If only package.json changes but the lock file does not,
+      #  the cache is still reused — which is the correct behaviour for npm ci.
+      # ────────────────────────────────────────────────────────────────────────
+      - name: "⚙️  Set up Node.js 20"
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      # ── Step 3: Install dependencies ────────────────────────────────────────
+      #
+      #  `npm ci` vs `npm install` — why CI always uses `npm ci`:
+      #
+      #    npm install            npm ci
+      #    ─────────────────────  ────────────────────────────────────────────
+      #    Resolves semver ranges  Reads package-lock.json exactly (no resolution)
+      #    May update lock file    Fails if lock file is out of sync with package.json
+      #    Keeps node_modules      Deletes node_modules first → clean slate
+      #    Slower (resolver runs)  Faster (skips resolver, parallel downloads)
+      #
+      #  The "fails if out of sync" behaviour is a critical CI safety net:
+      #  if a developer ran `npm install` locally and forgot to commit the
+      #  updated lock file, CI will immediately surface it as a red build
+      #  rather than silently installing a different package version.
+      #
+      #  With the npm cache restored in Step 2, npm ci skips network downloads
+      #  for packages already in ~/.npm and installs from the local cache.
+      # ────────────────────────────────────────────────────────────────────────
+      - name: "📦 Install dependencies (npm ci)"
+        run: npm ci
+
+      # ── Step 4: Verify dependency tree ──────────────────────────────────────
+      #
+      #  `npm ls --depth=0` prints the top-level dependency tree and exits
+      #  with a non-zero code if any package is:
+      #    • Missing from node_modules
+      #    • Present with an incompatible version
+      #    • Flagged with an unresolvable peer dependency conflict
+      #
+      #  Why do this after `npm ci` already succeeded?
+      #    • `npm ci` installs all packages but is lenient about peer warnings.
+      #    • `npm ls` provides a human-readable summary in the workflow log
+      #      that makes it immediately obvious what was installed, which is
+      #      invaluable when debugging a flaky build weeks later.
+      #    • It acts as a secondary sanity check with a separate exit code.
+      # ────────────────────────────────────────────────────────────────────────
+      - name: "🔍 Verify dependency tree"
+        run: npm ls --depth=0
+
+      # ── Step 5: Lint with ESLint ────────────────────────────────────────────
+      #
+      #  Runs `npm run lint` → `eslint .`
+      #
+      #  This project uses ESLint v10 with the modern flat-config format
+      #  (eslint.config.js), covering:
+      #    • eslint:recommended      — standard JS best practices
+      #    • react-hooks/recommended — enforces the Rules of Hooks
+      #    • react-refresh/vite      — flags components that would cause a
+      #                               full page reload instead of HMR
+      #
+      #  Linting in CI enforces code quality as a hard gate — not just a
+      #  developer courtesy. Common issues caught here:
+      #    • `no-unused-vars`        — dead code / typos in variable names
+      #    • `react-hooks/exhaustive-deps` — missing hook dependencies that
+      #       cause stale closure bugs at runtime
+      #    • `react-refresh/only-export-components` — export patterns that
+      #       break Vite HMR in development
+      #
+      #  The step fails the entire job if any lint error is found, preventing
+      #  a bad commit from ever reaching the main branch.
+      # ────────────────────────────────────────────────────────────────────────
+      - name: "🔎 Lint — ESLint"
+        run: npm run lint
+
+      # ── Step 6: Production build ─────────────────────────────────────────────
+      #
+      #  Runs `npm run build` → `vite build`
+      #
+      #  What Vite does during a production build:
+      #    1. Resolves all import/export chains starting from src/main.jsx
+      #    2. Transpiles JSX → JS via @vitejs/plugin-react (Babel under the hood)
+      #    3. Tree-shakes: removes unreachable/unused code
+      #    4. Code-splits: separates vendor chunks from app chunks for better
+      #       browser caching (React itself is in a separate chunk)
+      #    5. Minifies JS (Terser) and CSS
+      #    6. Adds content-hash suffixes to all output filenames:
+      #       e.g.  index-B3mN9kP.js — this matches the 1-year cache headers
+      #             in our nginx.conf (`Cache-Control: public, immutable`)
+      #    7. Writes everything to /dist
+      #
+      #  Why is running the build in CI essential?
+      #    • JSX syntax errors, missing imports, and circular dependencies
+      #      that Vite's dev server tolerates (lazy evaluation) are surfaced
+      #      here as hard build failures.
+      #    • Catches tree-shaking errors and chunk-split edge cases that only
+      #      appear in the bundled output, not in development mode.
+      #    • Guarantees that what lands in main is always shippable.
+      #
+      #  The VITE_* env vars set at the job level are inherited by this step,
+      #  so Vite sees them as import.meta.env.VITE_* inside the source code.
+      # ────────────────────────────────────────────────────────────────────────
+      - name: "🏗️  Build — Vite production bundle"
+        run: npm run build
+
+      # ── Step 7: Upload build artifact ───────────────────────────────────────
+      #
+      #  Persists the compiled /dist folder as a named artifact attached to
+      #  this specific workflow run (identified by github.sha — the full
+      #  40-character commit SHA, e.g. a3f8c1d...).
+      #
+      #  Why upload the artifact?
+      #    1. Inspection: team members can download /dist without re-running
+      #       the build locally — useful for quick verification of what CI
+      #       actually produced.
+      #    2. CD handoff (future): a `deploy` job declared with `needs: [frontend]`
+      #       can download this exact artifact via actions/download-artifact@v4
+      #       and deploy it to Vercel/S3/nginx — guaranteeing the deployed binary
+      #       is the one CI validated, not a fresh re-build.
+      #    3. Audit trail: artifact names include the commit SHA, making it easy
+      #       to trace any deployed bundle back to the exact source commit.
+      #
+      #  retention-days: 7 keeps storage costs low while giving the team a
+      #  week to download and inspect any build before it expires.
+      # ────────────────────────────────────────────────────────────────────────
+      - name: "📤 Upload dist artifact"
+        uses: actions/upload-artifact@v4
+        with:
+          name: "dist-${{ github.sha }}"
+          path: dist/
+          retention-days: 7
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  FUTURE JOB SLOTS
+#  ─────────────────
+#  Uncomment and flesh out each block as the project matures.
+#  Each job is designed to run in parallel where possible (no `needs:`),
+#  or sequentially where a dependency exists (e.g., deploy needs build to pass).
+# ══════════════════════════════════════════════════════════════════════════════
+
+  # ── SLOT A: Unit & Integration Tests (Vitest) ─────────────────────────────
+  #
+  #  When to enable:
+  #    Add `vitest` and `@testing-library/react` to devDependencies,
+  #    create src/**/*.test.jsx files, and add "test": "vitest run" to
+  #    package.json scripts.
+  #
+  #  test:
+  #    name: "Frontend — Unit Tests (Vitest)"
+  #    runs-on: ubuntu-latest
+  #    needs: [frontend]             # Only run if the build passed cleanly
+  #    steps:
+  #      - uses: actions/checkout@v4
+  #      - uses: actions/setup-node@v4
+  #        with:
+  #          node-version: "20"
+  #          cache: "npm"
+  #      - run: npm ci
+  #      - name: "Run Vitest"
+  #        run: npm test -- --reporter=verbose --coverage
+  #      - name: "Upload coverage report"
+  #        uses: actions/upload-artifact@v4
+  #        with:
+  #          name: "coverage-${{ github.sha }}"
+  #          path: coverage/
+  #          retention-days: 7
+
+  # ── SLOT B: Backend CI (Node/Express + MongoDB) ────────────────────────────
+  #
+  #  When to enable:
+  #    After the Node.js/Express backend (currently being built with
+  #    JWT auth + Mongoose) is committed to a /server directory.
+  #
+  #  backend:
+  #    name: "Backend — Lint & Test"
+  #    runs-on: ubuntu-latest
+  #    services:
+  #      mongo:                      # Spin up a real MongoDB for integration tests
+  #        image: mongo:7
+  #        ports: ["27017:27017"]
+  #    steps:
+  #      - uses: actions/checkout@v4
+  #      - uses: actions/setup-node@v4
+  #        with:
+  #          node-version: "20"
+  #          cache: "npm"
+  #          cache-dependency-path: server/package-lock.json
+  #      - name: "Install backend deps"
+  #        run: npm ci
+  #        working-directory: server
+  #      - name: "Lint backend"
+  #        run: npm run lint
+  #        working-directory: server
+  #      - name: "Run backend tests"
+  #        run: npm test
+  #        working-directory: server
+  #        env:
+  #          NODE_ENV:   test
+  #          MONGO_URI:  mongodb://localhost:27017/lms_test
+  #          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+
+  # ── SLOT C: Docker Build & Push to GHCR ──────────────────────────────────
+  #
+  #  When to enable:
+  #    When the team adopts a container-based deployment strategy.
+  #    Uses the existing multi-stage Dockerfile (Node 20 builder → nginx:1.27-alpine).
+  #    Only runs on pushes to main (not on feature branches) to avoid
+  #    flooding the container registry with unreviewd images.
+  #
+  #  docker:
+  #    name: "Docker — Build & Push"
+  #    runs-on: ubuntu-latest
+  #    needs: [frontend]
+  #    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+  #    permissions:
+  #      contents: read
+  #      packages: write            # Required to push to ghcr.io
+  #    steps:
+  #      - uses: actions/checkout@v4
+  #      - uses: docker/setup-buildx-action@v3
+  #      - uses: docker/login-action@v3
+  #        with:
+  #          registry: ghcr.io
+  #          username: ${{ github.actor }}
+  #          password: ${{ secrets.GITHUB_TOKEN }}
+  #      - uses: docker/build-push-action@v6
+  #        with:
+  #          context: .
+  #          push: true
+  #          tags: |
+  #            ghcr.io/${{ github.repository }}:latest
+  #            ghcr.io/${{ github.repository }}:${{ github.sha }}
+  #          build-args: |
+  #            VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }}
+  #            VITE_ENABLE_MOCK_API=false
+  #          cache-from: type=gha   # GitHub Actions cache for Docker layers
+  #          cache-to:   type=gha,mode=max
+
+  # ── SLOT D: Deploy to Vercel ──────────────────────────────────────────────
+  #
+  #  When to enable:
+  #    The project already has vercel.json with SPA rewrites configured.
+  #    This slot promotes the validated CI artifact directly to Vercel —
+  #    no second build step, deploy what CI tested.
+  #
+  #    Preview URL on every PR; production URL only on merges to main.
+  #
+  #  deploy-vercel:
+  #    name: "Deploy — Vercel"
+  #    runs-on: ubuntu-latest
+  #    needs: [frontend]
+  #    if: github.event_name == 'push'
+  #    environment:
+  #      name: ${{ github.ref == 'refs/heads/main' && 'production' || 'preview' }}
+  #    steps:
+  #      - uses: actions/checkout@v4
+  #      - name: "Download validated dist artifact"
+  #        uses: actions/download-artifact@v4
+  #        with:
+  #          name: "dist-${{ github.sha }}"
+  #          path: dist/
+  #      - name: "Deploy to Vercel"
+  #        uses: amondnet/vercel-action@v25
+  #        with:
+  #          vercel-token:      ${{ secrets.VERCEL_TOKEN }}
+  #          vercel-org-id:     ${{ secrets.VERCEL_ORG_ID }}
+  #          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+  #          vercel-args:       ${{ github.ref == 'refs/heads/main' && '--prod' || '' }}
