@@ -1,0 +1,40 @@
+# .dockerignore — Excludes files from the Docker build context
+#
+# When you run `docker build` or `docker compose up --build`, Docker sends
+# the entire project directory to the Docker daemon as the "build context".
+# Files listed here are excluded from that transfer.
+#
+# Why this matters:
+#   1. Speed     — Smaller context = faster upload to the daemon
+#   2. Cache     — Prevents irrelevant file changes from busting the layer cache
+#   3. Security  — Keeps secrets and local config out of the image
+#   4. Size      — node_modules alone can be 200MB+; we rebuild inside Docker
+
+# ── Node.js ───────────────────────────────────────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# ── Vite build output ─────────────────────────────────────────────────────────
+# We rebuild inside Docker; local /dist should never be copied in
+dist/
+dist-ssr/
+
+# ── Environment files ─────────────────────────────────────────────────────────
+# .env may contain real secrets — keep it out of the image
+.env
+*.local
+
+# ── Git history ───────────────────────────────────────────────────────────────
+.git/
+.gitignore
+
+# ── Editor / OS artifacts ─────────────────────────────────────────────────────
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# ── Documentation & Tests ────────────────────────────────────────────────────
+README.md
+*.md

@@ -1,0 +1,60 @@
+##############################################################################
+#  docker-compose.yml — Leave Management Dashboard
+#
+#  Starts the complete application with one command:
+#    docker compose up --build
+#
+#  Services defined here:
+#    • frontend  — React + Vite app served by Nginx on port 80
+#
+#  When a backend is added later, it will become a second service here
+#  (e.g., "backend" with its own Dockerfile and "db" for MongoDB).
+##############################################################################
+
+services:
+
+  # ── Frontend ───────────────────────────────────────────────────────────────
+  frontend:
+    # Build context: the current directory (where this file lives)
+    # Docker Compose sends this directory to the Docker daemon, which runs
+    # the Dockerfile found inside it.
+    build:
+      context: .                      # Project root
+      dockerfile: Dockerfile          # Use our multi-stage Dockerfile
+
+      # Pass VITE_* env vars as Docker build arguments.
+      # Values come from the .env.docker file (loaded automatically by Compose).
+      # The ${VAR:-default} syntax means "use $VAR if set, else use the default".
+      # This keeps the Compose file declarative and the .env file as the
+      # single source of truth for configuration.
+      args:
+        VITE_APP_NAME:        ${VITE_APP_NAME:-Leave Management System}
+        VITE_APP_VERSION:     ${VITE_APP_VERSION:-1.0.0}
+        VITE_API_BASE_URL:    ${VITE_API_BASE_URL:-http://localhost:3000/api}
+        VITE_REQUEST_TIMEOUT: ${VITE_REQUEST_TIMEOUT:-8000}
+        VITE_ENABLE_MOCK_API: ${VITE_ENABLE_MOCK_API:-true}
+
+    # Map host port 5173 → container port 80 (Nginx inside the container)
+    # Format: "host_port:container_port"
+    # Visit http://localhost:5173 in your browser to see the app.
+    # Port 5173 mirrors what `vite dev` uses, keeping muscle memory intact.
+    ports:
+      - "5173:80"
+
+    # Restart policy:
+    #   unless-stopped = restart automatically on crash or host reboot,
+    #   but NOT if you explicitly ran `docker compose stop`.
+    restart: unless-stopped
+
+    # Container name — makes docker logs / docker exec easier to type
+    container_name: lms-frontend
+
+# ── Networks ──────────────────────────────────────────────────────────────────
+# Docker Compose creates a default bridge network for all services in this file.
+# Services on the same network can reach each other by service name as hostname.
+# Example (for future use): the frontend can proxy to http://backend:3000
+# No custom network is needed for a single-service setup, but it's shown
+# here as a best practice to make it explicit and easier to extend.
+networks:
+  default:
+    name: lms-network
