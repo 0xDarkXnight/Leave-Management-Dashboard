@@ -1,180 +1,268 @@
-# Leave Management Dashboard
+# OffSync
 
-A modern Leave Management Dashboard built with **React**, **Vite**, and **React Router** that allows users to manage leave requests efficiently through a clean and responsive interface.
+OffSync is a modern, role-based leave management workspace built with **React**, **Vite**, and **React Router**. It gives employees a clean way to apply for leave, track request status, and message their manager, while giving managers a structured dashboard to review, approve, or reject requests with real-time updates.
 
-## Features
+## 1. Title and Description
 
-### Dashboard
-- View overall leave statistics
-- Total Leave Requests
-- Pending Requests
-- Approved Requests
-- Rejected Requests
+OffSync brings leave requests, approvals, notifications, activity logs, and team communication into one polished interface.
 
-### Leave Application
-- Submit new leave requests
-- Enter employee details and leave information
-- Automatically assigns new requests a **Pending** status
+It is designed for two core user roles:
 
-### Leave History
-- View all submitted leave requests
-- Edit existing requests
-- Delete requests
-- Approve or Reject requests
-- Track request status in real-time
+- **Employee**: submit leave requests, edit pending requests, track history, receive notifications, and chat with a manager.
+- **Manager**: review requests, take approval actions, monitor team activity, and respond through the built-in message panel.
 
-### Data Persistence
-- Stores all leave requests in **Local Storage**
-- Data remains available after page refreshes
+The project currently runs in a frontend-first mode with a mock API layer, local storage persistence, and optional backend configuration through environment variables.
 
-### Responsive UI
-- Mobile-friendly design
-- Modern dark theme
-- Clean dashboard layout
+## 2. Architecture
 
-## Tech Stack
+- **Presentation layer**  
+  Pages and reusable UI components render the experience: dashboard, leave form, history table, login screen, notifications, activity feed, and chat panels.
 
-| Technology | Purpose |
-|------------|---------|
-| React | Frontend UI |
-| Vite | Build Tool |
-| React Router DOM | Client-side Routing |
-| JavaScript (ES6+) | Application Logic |
-| CSS3 | Styling |
-| Local Storage API | Data Persistence |
+- **State and context layer**  
+  `AuthProvider`, `ChatProvider`, `NotificationProvider`, and `ToastProvider` share app-wide state such as the current user, unread notifications, conversations, and toast messages.
 
-## Project Structure
+- **Feature hooks layer**  
+  Custom hooks like `useLeaveRequests`, `useAuth`, `useChat`, `useNotifications`, and `useToast` keep the logic organized and reusable.
 
-```text
-src/
-│
-├── components/
-│   ├── LeaveForm.jsx
-│   ├── LeaveTable.jsx
-│   ├── Navbar.jsx
-│   └── SummaryCard.jsx
-│
-├── pages/
-│   ├── Dashboard.jsx
-│   ├── ApplyLeave.jsx
-│   └── LeaveHistory.jsx
-│
-├── App.jsx
-├── main.jsx
-└── index.css
-```
+- **Service layer**  
+  API-facing modules (`authService`, `leaveService`, `chatService`, `notificationService`) centralize server calls and keep components lightweight.
 
-## Installation
+- **Mock API layer**  
+  `axios-mock-adapter` intercepts requests when mock mode is enabled, so the app can run without a separate backend during development or demo mode.
 
-### 1. Clone the Repository
+- **Persistence layer**  
+  Leave requests, chats, notifications, activity, and auth session data are stored in `localStorage` for fast client-side persistence across refreshes.
+
+- **Realtime sync layer**  
+  `BroadcastChannel`-based socket emulation keeps messages, notifications, presence, typing indicators, and activity updates in sync across open tabs.
+
+- **Routing and access control**  
+  React Router powers the navigation flow, while `ProtectedRoute` and `RoleGuard` restrict access based on authentication status and user role.
+
+- **Deployment layer**  
+  The app can be deployed as a static SPA on **Vercel** or packaged with **Docker + Nginx** for containerized hosting.
+
+## 3. Features
+
+- **Role-based login**
+  - Separate employee and manager login modes
+  - Demo credentials for quick testing
+  - Password visibility toggle and inline validation
+  - Redirects users to the correct dashboard after sign-in
+
+- **Employee dashboard**
+  - Leave summary cards with live counts
+  - Recent leave activity overview
+  - Friendly empty and loading states
+  - Quick navigation to apply for leave
+
+- **Leave application and editing**
+  - Create new leave requests
+  - Edit existing requests from history
+  - Auto-fills employee name from the logged-in session
+  - Field-level validation for dates and reason length
+  - Prevents invalid date ranges and past dates for new submissions
+
+- **Leave history management**
+  - Search by employee name
+  - Filter by request status
+  - View leave type, date range, duration, reason, submission time, and status
+  - Edit and delete requests from the same view
+  - Responsive table and mobile card layout
+
+- **Manager workflow**
+  - Dedicated manager dashboard
+  - Review all team requests in one place
+  - Approve or reject with confirmation modal
+  - Filter by request status
+  - See summary statistics for team leave activity
+
+- **Notifications**
+  - Live unread badge and notification dropdown/page
+  - Mark single or all notifications as read
+  - Dismiss notifications
+  - Route users to the related page from a notification
+
+- **Chat**
+  - Built-in employee/manager conversation area
+  - Conversation list with unread counts
+  - Message sending with optimistic UI
+  - Typing indicators
+  - Presence awareness across tabs
+
+- **Activity tracking**
+  - Chronological activity feed for sign-ins, sign-outs, leave actions, and messages
+  - Manager-visible full activity timeline
+  - Employee-visible personal activity relevant to their account
+
+- **User experience**
+  - Toast feedback for success and error states
+  - Confirmation dialogs for approve/reject/delete actions
+  - Clean dark UI styling with responsive layout
+  - Accessible form labels, keyboard-friendly controls, and error messaging
+
+- **Development and runtime support**
+  - Mock API mode for standalone development
+  - Backend-ready API configuration
+  - Vite-powered fast local development
+  - Docker and Vercel deployment support
+
+## 4. Getting Started
+
+### 4.1 Prerequisites
+
+- **Node.js 20+** recommended
+- **npm** or another Node package manager
+- Optional: **Docker** if you want to run the containerized build
+- Optional: a backend service if you plan to disable mock mode
+
+### 4.2 Installation
 
 ```bash
-git clone https://github.com/your-username/leave-management-dashboard.git
-```
-
-### 2. Navigate to Project Directory
-
-```bash
-cd leave-management-dashboard
-```
-
-### 3. Install Dependencies
-
-```bash
+git clone <your-repository-url>
+cd OffSync
 npm install
 ```
 
-### 4. Start Development Server
+### 4.3 Configuration
 
-```bash
-npm run dev
+Create a `.env` file in the project root. You can start from `.env.example`.
+
+```env
+VITE_APP_NAME=OffSync
+VITE_APP_VERSION=1.0.0
+VITE_API_BASE_URL=http://localhost:3000/api
+VITE_REQUEST_TIMEOUT=8000
+VITE_ENABLE_MOCK_API=true
 ```
 
-The application will be available at:
+What each variable does:
+
+- `VITE_APP_NAME` sets the displayed application name.
+- `VITE_APP_VERSION` tags the build version.
+- `VITE_API_BASE_URL` points to the backend API when mock mode is disabled.
+- `VITE_REQUEST_TIMEOUT` controls API request timeout in milliseconds.
+- `VITE_ENABLE_MOCK_API` enables the built-in mock API layer when set to `true`.
+
+Demo credentials used by the login screen:
 
 ```text
-http://localhost:5173
+Employee
+Email: employee@lms.com
+Password: employee123
+
+Manager
+Email: manager@lms.com
+Password: manager123
 ```
 
-## Available Scripts
+### 4.4 Running Locally
 
-### Run Development Server
+Start the development server:
 
 ```bash
 npm run dev
 ```
 
-### Create Production Build
+Then open the app in your browser, sign in with one of the demo accounts, and explore the role-specific workspace.
+
+## 5. Usage
+
+### Employee flow
+
+1. Sign in as an employee.
+2. Open **Apply Leave**.
+3. Fill in the leave type, dates, and reason.
+4. Submit the request.
+5. Check **Leave History** to track status updates.
+6. Review notifications and chat with the manager when needed.
+
+### Manager flow
+
+1. Sign in as a manager.
+2. Open **Manager Dashboard**.
+3. Review pending leave requests.
+4. Approve or reject a request using the confirmation modal.
+5. Track team activity through notifications and the activity feed.
+6. Respond to employee messages through the chat screen.
+
+### Useful behaviors
+
+- Edit a pending request directly from the leave history table.
+- Delete a request with confirmation.
+- Switch browser tabs to see realtime sync behavior across sessions.
+- Use the search and filter controls to narrow down requests quickly.
+
+## 6. Deployment
+
+### Vercel
+
+The repository includes a `vercel.json` rewrite rule so React Router paths resolve correctly on refresh. For Vercel deployment:
+
+1. Push the project to GitHub.
+2. Import the repository into Vercel.
+3. Set the environment variables if you want to override the defaults.
+4. Deploy the app as a static frontend.
+
+### Docker
+
+The project also includes a multi-stage `Dockerfile`, `docker-compose.yml`, `nginx.conf`, and `.dockerignore`.
+
+Run the containerized version with:
 
 ```bash
-npm run build
+docker compose --env-file .env.docker up --build
 ```
 
-### Preview Production Build
+This builds the Vite app, serves it through Nginx, and exposes it on port `5173`.
 
-```bash
-npm run preview
-```
+## 7. Project Status
 
-### Run ESLint
+OffSync is in a strong frontend-complete state with:
 
-```bash
-npm run lint
-```
+- authentication and role routing
+- leave request CRUD
+- approval workflow
+- notifications
+- chat
+- activity logging
+- responsive UI
+- mock API support
 
-## Application Workflow
+The codebase is ready for a real backend integration by switching `VITE_ENABLE_MOCK_API` to `false` and pointing `VITE_API_BASE_URL` to the live service.
 
-1. Open the dashboard.
-2. Navigate to **Apply Leave**.
-3. Submit a leave request.
-4. Request is stored with **Pending** status.
-5. View requests in **Leave History**.
-6. Approve, Reject, Edit, or Delete requests.
-7. Dashboard statistics update automatically.
+## 8. Contributing
 
-## Key Functionalities
+Contributions are welcome.
 
-### Create Leave Request
+1. Fork the repository.
+2. Create a feature branch.
+3. Make your changes.
+4. Test locally with `npm run dev` and `npm run build`.
+5. Open a pull request with a clear summary of the update.
 
-Users can submit:
-- Employee Name
-- Leave Type
-- Start Date
-- End Date
-- Reason
+A few good contribution ideas:
 
-### Update Status
+- connect a real backend
+- extend manager analytics
+- improve notifications and message workflows
+- add export/download options for leave history
+- strengthen accessibility and mobile polish
 
-Requests can be marked as:
-- Pending
-- Approved
-- Rejected
+## 9. Project License
 
-### Edit Request
+A license file is not included in the repository yet.  
+Add your preferred license before publishing the project publicly.
 
-Existing leave applications can be modified and updated.
+## References
 
-### Delete Request
-
-Leave requests can be permanently removed from the system.
-
-### Persistent Storage
-
-All data is stored in browser Local Storage and automatically restored when the application reloads.
-
-## Learning Objectives
-
-This project demonstrates:
-
-- React Components
-- React Hooks (`useState`, `useEffect`)
-- React Router
-- State Management
-- Form Handling
-- CRUD Operations
-- Local Storage Integration
-- Responsive UI Design
-
-## License
-
-This project is open source and available under the MIT License.
+- React
+- Vite
+- React Router DOM
+- Axios
+- axios-mock-adapter
+- Docker
+- Nginx
+- Vercel
+- Browser `localStorage`
+- Browser `BroadcastChannel`
